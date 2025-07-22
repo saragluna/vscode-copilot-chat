@@ -11,6 +11,7 @@ import { ChoiceLogProbs } from './openai';
 
 export interface RequestId {
 	headerRequestId: string;
+	githubHeaderRequestId: string;
 	completionId: string;
 	created: number;
 	serverExperiments: string;
@@ -20,6 +21,7 @@ export interface RequestId {
 export function getRequestId(response: Response, json?: any): RequestId {
 	return {
 		headerRequestId: response.headers.get('x-request-id') || '',
+		githubHeaderRequestId: response.headers.get('x-github-request-id') || '',
 		completionId: json && json.id ? json.id : '',
 		created: json && json.created ? json.created : 0,
 		serverExperiments: response.headers.get('X-Copilot-Experiment') || '',

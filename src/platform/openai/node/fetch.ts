@@ -548,6 +548,8 @@ async function fetchWithInstrumentation(
 
 		logService.logger.debug(`messages: ${JSON.stringify(request.messages)}`);
 
+		logService.logger.debug(`modelRequestId: ${JSON.stringify(modelRequestId)}`);
+
 		telemetryService.sendGHTelemetryEvent('request.response', telemetryData.properties, telemetryData.measurements);
 
 		return response;
