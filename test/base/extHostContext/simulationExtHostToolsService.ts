@@ -144,7 +144,8 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			...tools,
 		];
 
-		logger.debug('SimulationExtHostToolsService.getEnabledTool', tools.length, JSON.stringify(tools));
+		const toolNames = result.map(t => t.name).join(",");
+		logger.debug('SimulationExtHostToolsService.getEnabledTool', tools.length, toolNames);
 		return result;
 	}
 
