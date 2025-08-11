@@ -2,9 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as vscode from 'vscode';
-// eslint-disable-next-line no-restricted-imports
 import * as fs from 'fs';
+import * as vscode from 'vscode';
 /* eslint-disable import/no-restricted-paths */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -17,7 +16,6 @@ import { ICopilotTool } from '../common/toolsRegistry';
 import { BaseToolsService } from '../common/toolsService';
 // eslint-disable-next-line no-duplicate-imports
 import { LanguageModelToolResult2 } from 'vscode';
-// eslint-disable-next-line local/no-test-imports
 import { logger } from '../../../../test/simulationLogger';
 
 type McpServers = {
@@ -37,7 +35,8 @@ export class McpToolsService extends BaseToolsService {
 
 	private readonly _copilotTools: Lazy<Map<ToolName, ICopilotTool<any>>>;
 	private mcpTools: vscode.LanguageModelToolInformation[] = [];
-	private readonly mcp!: Client;
+	private readonly mcpClients: Map<string, Client> = new Map();
+	private readonly toolToServerMap: Map<string, string> = new Map();
 
 	get tools(): ReadonlyArray<vscode.LanguageModelToolInformation> {
 		return this.mcpTools.map(tool => {
@@ -61,7 +60,6 @@ export class McpToolsService extends BaseToolsService {
 		super(logService);
 		this._copilotTools = new Lazy(() => new Map());
 		if (process.env.MCP_CONFIG_FILE !== undefined) {
-			this.mcp = new Client({ name: 'mcp-simulation-client', version: '1.0.0' });
 			const config = fs.readFileSync(process.env.MCP_CONFIG_FILE, 'utf8');
 			const mcpServers: McpServers = JSON.parse(config);
 
@@ -89,18 +87,28 @@ export class McpToolsService extends BaseToolsService {
 					logger.warn(`Unsupported MCP transport type: ${server.type} for server ${name}`);
 					continue; // Unsupported transport type
 				}
-				this.mcp.connect(transport).then(async () => {
-					const mcpTools = (await this.mcp.listTools()).tools;
+
+				// Create a separate client for each server
+				const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
+				this.mcpClients.set(name, mcpClient);
+
+				mcpClient.connect(transport).then(async () => {
+					const mcpTools = (await mcpClient.listTools()).tools;
 					for (const tool of mcpTools) {
 						const info: LanguageModelToolInformation = {
 							name: tool.name,
 							description: tool.description as string,
 							inputSchema: tool.inputSchema,
 							tags: ['vscode_editing'],
+							source: { name: 'mcp', label: `MCP Server: ${name}` },
 						};
 						this.mcpTools.push(info);
+						// Map tool name to server name for later lookup
+						this.toolToServerMap.set(tool.name, name);
 					}
-					logger.info(`Connected to MCP server with transport ${JSON.stringify(transport)} and tools: ${JSON.stringify(this.mcpTools)}`);
+					logger.info(`Connected to MCP server ${name} with transport ${JSON.stringify(transport)} and tools: ${JSON.stringify(mcpTools)}`);
+				}).catch(error => {
+					logger.error(`Failed to connect to MCP server ${name}: ${error}`);
 				});
 			}
 		}
@@ -108,7 +116,19 @@ export class McpToolsService extends BaseToolsService {
 
 	async invokeTool(name: string | ToolName, options: vscode.LanguageModelToolInvocationOptions<Object>, token: vscode.CancellationToken): Promise<LanguageModelToolResult | LanguageModelToolResult2> {
 		this._onWillInvokeTool.fire({ toolName: name });
-		const result = await this.mcp?.callTool({
+
+		// Find which server provides this tool
+		const serverName = this.toolToServerMap.get(name as string);
+		if (!serverName) {
+			throw new Error(`Tool ${name} not found in any MCP server`);
+		}
+
+		const mcpClient = this.mcpClients.get(serverName);
+		if (!mcpClient) {
+			throw new Error(`MCP client for server ${serverName} not found`);
+		}
+
+		const result = await mcpClient.callTool({
 			name: name,
 			arguments: options.input as Record<string, unknown>,
 		});
@@ -173,6 +193,24 @@ export class McpToolsService extends BaseToolsService {
 
 			return false;
 		});
+	}
+
+	/**
+	 * Dispose of all MCP client connections
+	 */
+	override dispose(): void {
+		super.dispose();
+
+		for (const [serverName, client] of this.mcpClients) {
+			try {
+				client.close();
+				logger.info(`Closed MCP client connection for server: ${serverName}`);
+			} catch (error) {
+				logger.error(`Error closing MCP client for server ${serverName}: ${error}`);
+			}
+		}
+		this.mcpClients.clear();
+		this.toolToServerMap.clear();
 	}
 }
 
