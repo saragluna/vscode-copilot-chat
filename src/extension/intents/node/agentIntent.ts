@@ -72,7 +72,7 @@ const getTools = (instaService: IInstantiationService, request: vscode.ChatReque
 		allowTools[ToolName.RunTests] = await testService.hasAnyTests();
 		allowTools[ToolName.CoreCreateAndRunTask] = !!(configurationService.getConfig(ConfigKey.AgentCanRunTasks) && tasksService.getTasks().length);
 
-		return toolsService.getEnabledTools(request, tool => {
+		return await toolsService.getEnabledTools(request, tool => {
 			if (typeof allowTools[tool.name] === 'boolean') {
 				return allowTools[tool.name];
 			}
@@ -195,6 +195,7 @@ export class AgentIntentInvocation extends EditCodeIntentInvocation {
 	}
 
 	public override getAvailableTools(): Promise<vscode.LanguageModelToolInformation[]> {
+		this.logService.logger.debug('xiading: SimulationExtHostToolsService.getAvailableTools');
 		return getTools(this.instantiationService, this.request);
 	}
 

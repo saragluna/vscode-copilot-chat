@@ -9,17 +9,17 @@ import type { CancellationToken, ChatRequest, LanguageModelTool, LanguageModelTo
 import { getToolName, ToolName } from '../../../src/extension/tools/common/toolNames';
 import { ICopilotTool } from '../../../src/extension/tools/common/toolsRegistry';
 import { BaseToolsService, IToolsService } from '../../../src/extension/tools/common/toolsService';
+import { getPackagejsonToolsForTest } from '../../../src/extension/tools/node/test/testToolsService';
 import { McpToolsService } from '../../../src/extension/tools/vscode-node/mcpToolsService';
 import { ToolsContribution } from '../../../src/extension/tools/vscode-node/tools';
 import { ToolsService } from '../../../src/extension/tools/vscode-node/toolsService';
 import { packageJson } from '../../../src/platform/env/common/packagejson';
 import { ILogService } from '../../../src/platform/log/common/logService';
+import { raceTimeout } from '../../../src/util/vs/base/common/async';
 import { CancellationError } from '../../../src/util/vs/base/common/errors';
 import { Iterable } from '../../../src/util/vs/base/common/iterator';
 import { IInstantiationService } from '../../../src/util/vs/platform/instantiation/common/instantiation';
 import { logger } from '../../simulationLogger';
-import { raceTimeout } from '../../../src/util/vs/base/common/async';
-import { getPackagejsonToolsForTest } from '../../../src/extension/tools/node/test/testToolsService';
 
 export class SimulationExtHostToolsService extends BaseToolsService implements IToolsService {
 	declare readonly _serviceBrand: undefined;
@@ -137,16 +137,24 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		return undefined;
 	}
 
-	getEnabledTools(request: ChatRequest, filter?: (tool: LanguageModelToolInformation) => boolean | undefined): LanguageModelToolInformation[] {
+	getEnabledTools(request: ChatRequest, filter?: (tool: LanguageModelToolInformation) => boolean | undefined): Promise<LanguageModelToolInformation[]> {
+		logger.info('xiading: SimulationExtHostToolsService.getEnabledTool');
 		const packageJsonTools = getPackagejsonToolsForTest();
 		const tools = this.tools.filter(tool => filter?.(tool) ?? (!this._disabledTools.has(getToolName(tool.name)) && (tool.name.startsWith("appmod") || packageJsonTools.has(tool.name))));
-		const result = [
-			...tools,
-		];
-
-		const toolNames = result.map(t => t.name).join(",");
-		logger.debug('SimulationExtHostToolsService.getEnabledTool', tools.length, toolNames);
-		return result;
+		return this._mcpToolService.getEnabledTools(request, filter).then(mcpTools => {
+			const allToolsMap = new Map<string, LanguageModelToolInformation>();
+			for (const t of tools) {
+				allToolsMap.set(t.name, t);
+			}
+			for (const t of mcpTools) {
+				logger.debug(`xiading: SimulationExtHostToolsService.getEnabledTool mcpTool: ${t.name}`);
+				allToolsMap.set(t.name, t);
+			}
+			const allTools = Array.from(allToolsMap.values());
+			const toolNames = allTools.map(t => t.name).join(",");
+			logger.debug('SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
+			return allTools;
+		});
 	}
 
 	addTestToolOverride(info: LanguageModelToolInformation, tool: LanguageModelTool<unknown>): void {

@@ -91,10 +91,10 @@ export class ToolsService extends BaseToolsService {
 		throw new Error('This method for tests only');
 	}
 
-	getEnabledTools(request: vscode.ChatRequest, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): vscode.LanguageModelToolInformation[] {
+	getEnabledTools(request: vscode.ChatRequest, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): Promise<vscode.LanguageModelToolInformation[]> {
 		const toolMap = new Map(this.tools.map(t => [t.name, t]));
 
-		return this.tools.filter(tool => {
+		const enabledTools = this.tools.filter(tool => {
 			// 0. Check if the tool was disabled via the tool picker. If so, it must be disabled here
 			const toolPickerSelection = request.tools.get(getContributedToolName(tool.name));
 			if (toolPickerSelection === false) {
@@ -128,5 +128,7 @@ export class ToolsService extends BaseToolsService {
 
 			return false;
 		});
+
+		return Promise.resolve(enabledTools);
 	}
 }

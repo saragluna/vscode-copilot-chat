@@ -55,7 +55,7 @@ const getTools = (instaService: IInstantiationService, request: vscode.ChatReque
 			lookForTools.add(ToolName.RunNotebookCell);
 		}
 
-		return toolsService.getEnabledTools(request, tool => lookForTools.has(tool.name));
+		return await toolsService.getEnabledTools(request, tool => lookForTools.has(tool.name));
 	});
 
 export class EditCode2Intent extends EditCodeIntent {

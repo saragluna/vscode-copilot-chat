@@ -384,7 +384,7 @@ class ProxiedWorkspace extends Disposable {
 	) {
 		super();
 		const log = logger.tag('ProxiedWorkspace');
-		_page.on('console', e => log.debug(`[ProxiedWorkspace] ${e.type().toUpperCase()}: ${e.text()}`));
+		_page.on('console', e => log.debug(`[${new Date().toISOString()}][ProxiedWorkspace] ${e.type().toUpperCase()}: ${e.text()}`));
 	}
 
 	public onConnection(rpc: SimpleRPC): ProxiedWorkspaceWithConnection {

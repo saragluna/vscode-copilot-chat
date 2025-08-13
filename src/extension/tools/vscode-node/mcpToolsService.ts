@@ -2,11 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as fs from 'fs';
-import * as vscode from 'vscode';
-/* eslint-disable import/no-restricted-paths */
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import * as fs from 'fs';
+import * as vscode from 'vscode';
 import { CancellationError, LanguageModelTextPart, LanguageModelToolInformation, LanguageModelToolResult } from 'vscode';
 import { ILogService } from '../../../platform/log/common/logService';
 import { Lazy } from '../../../util/vs/base/common/lazy';
@@ -16,7 +15,6 @@ import { ICopilotTool } from '../common/toolsRegistry';
 import { BaseToolsService } from '../common/toolsService';
 // eslint-disable-next-line no-duplicate-imports
 import { LanguageModelToolResult2 } from 'vscode';
-import { logger } from '../../../../test/simulationLogger';
 
 type McpServers = {
 	servers: {
@@ -37,8 +35,12 @@ export class McpToolsService extends BaseToolsService {
 	private mcpTools: vscode.LanguageModelToolInformation[] = [];
 	private readonly mcpClients: Map<string, Client> = new Map();
 	private readonly toolToServerMap: Map<string, string> = new Map();
+	private initializationPromise: Promise<void> | undefined;
 
 	get tools(): ReadonlyArray<vscode.LanguageModelToolInformation> {
+		// Trigger initialization if not already done
+		this.ensureInitialized();
+
 		return this.mcpTools.map(tool => {
 			return {
 				...tool,
@@ -59,63 +61,116 @@ export class McpToolsService extends BaseToolsService {
 	) {
 		super(logService);
 		this._copilotTools = new Lazy(() => new Map());
-		if (process.env.MCP_CONFIG_FILE !== undefined) {
+	}
+
+	/**
+	 * Ensures the MCP tools are initialized. This method is called lazily when tools are accessed.
+	 */
+	private ensureInitialized(): void {
+		if (this.initializationPromise) {
+			return; // Already initializing or initialized
+		}
+
+		this.initializationPromise = this.initializeAsync();
+	}
+
+	/**
+	 * Ensures the MCP tools are initialized and waits for completion. Used in async contexts.
+	 */
+	private async ensureInitializedAsync(): Promise<void> {
+		if (!this.initializationPromise) {
+			this.initializationPromise = this.initializeAsync();
+		}
+		await this.initializationPromise;
+	}
+
+	/**
+	 * Asynchronously initialize MCP clients and tools
+	 */
+	private async initializeAsync(): Promise<void> {
+		if (process.env.MCP_CONFIG_FILE === undefined) {
+			return;
+		}
+
+		try {
 			const config = fs.readFileSync(process.env.MCP_CONFIG_FILE, 'utf8');
 			const mcpServers: McpServers = JSON.parse(config);
 
+			const initPromises: Promise<void>[] = [];
+
 			for (const [name, server] of Object.entries(mcpServers.servers)) {
-				let transport;
-				const configuredEnv = server.env ? Object.fromEntries(Object.entries(server.env).map(([key, value]) => [key, replaceEnvVariables(value)])) : undefined;
-				// combine env with process.env, ensuring all values are strings (no undefined)
-				const rawEnv = configuredEnv ? { ...process.env, ...configuredEnv } : process.env;
-				const combinedEnv: Record<string, string> = {};
-				for (const [key, value] of Object.entries(rawEnv)) {
-					if (typeof value === 'string') {
-						combinedEnv[key] = value;
-					}
-				}
-
-				if (server.type === 'stdio') {
-					transport = new StdioClientTransport({
-						command: replaceEnvVariables(server.command),
-						args: server.args.map(arg => replaceEnvVariables(arg)),
-						env: combinedEnv,
-						stderr: 'inherit', // Default behavior, can be customized if needed
-						cwd: server.cwd ? replaceEnvVariables(server.cwd) : undefined,
-					});
-				} else {
-					logger.warn(`Unsupported MCP transport type: ${server.type} for server ${name}`);
-					continue; // Unsupported transport type
-				}
-
-				// Create a separate client for each server
-				const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
-				this.mcpClients.set(name, mcpClient);
-
-				mcpClient.connect(transport).then(async () => {
-					const mcpTools = (await mcpClient.listTools()).tools;
-					for (const tool of mcpTools) {
-						const info: LanguageModelToolInformation = {
-							name: tool.name,
-							description: tool.description as string,
-							inputSchema: tool.inputSchema,
-							tags: ['vscode_editing'],
-							source: { name: 'mcp', label: `MCP Server: ${name}` },
-						};
-						this.mcpTools.push(info);
-						// Map tool name to server name for later lookup
-						this.toolToServerMap.set(tool.name, name);
-					}
-					logger.info(`Connected to MCP server ${name} with transport ${JSON.stringify(transport)} and tools: ${JSON.stringify(mcpTools)}`);
-				}).catch(error => {
-					logger.error(`Failed to connect to MCP server ${name}: ${error}`);
-				});
+				initPromises.push(this.initializeServer(name, server));
 			}
+
+			await Promise.allSettled(initPromises);
+		} catch (error) {
+			// error logging removed
+		}
+	}
+
+	/**
+	 * Initialize a single MCP server
+	 */
+	private async initializeServer(name: string, server: {
+		type: string;
+		command: string;
+		args: string[];
+		env?: Record<string, string>;
+		cwd?: string;
+	}): Promise<void> {
+		let transport;
+		const configuredEnv = server.env ? Object.fromEntries(Object.entries(server.env).map(([key, value]) => [key, replaceEnvVariables(value)])) : undefined;
+		// combine env with process.env, ensuring all values are strings (no undefined)
+		const rawEnv = configuredEnv ? { ...process.env, ...configuredEnv } : process.env;
+		const combinedEnv: Record<string, string> = {};
+		for (const [key, value] of Object.entries(rawEnv)) {
+			if (typeof value === 'string') {
+				combinedEnv[key] = value;
+			}
+		}
+
+		if (server.type === 'stdio') {
+			transport = new StdioClientTransport({
+				command: replaceEnvVariables(server.command),
+				args: server.args.map((arg: string) => replaceEnvVariables(arg)),
+				env: combinedEnv,
+				stderr: 'inherit', // Default behavior, can be customized if needed
+				cwd: server.cwd ? replaceEnvVariables(server.cwd) : undefined,
+			});
+		} else {
+			// warn logging removed
+			return; // Unsupported transport type
+		}
+
+		try {
+			// Create a separate client for each server
+			const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
+			this.mcpClients.set(name, mcpClient);
+
+			await mcpClient.connect(transport);
+			const mcpTools = (await mcpClient.listTools()).tools;
+			for (const tool of mcpTools) {
+				const info: LanguageModelToolInformation = {
+					name: tool.name,
+					description: tool.description as string,
+					inputSchema: tool.inputSchema,
+					tags: ['vscode_editing'],
+					source: { name: 'mcp', label: `MCP Server: ${name}` },
+				};
+				this.mcpTools.push(info);
+				// Map tool name to server name for later lookup
+				this.toolToServerMap.set(tool.name, name);
+			}
+		} catch (error) {
+			// error logging removed
 		}
 	}
 
 	async invokeTool(name: string | ToolName, options: vscode.LanguageModelToolInvocationOptions<Object>, token: vscode.CancellationToken): Promise<LanguageModelToolResult | LanguageModelToolResult2> {
 		this._onWillInvokeTool.fire({ toolName: name });
+
+		// Ensure initialization is complete before invoking tools
+		await this.ensureInitializedAsync();
 
 		// Find which server provides this tool
 		const serverName = this.toolToServerMap.get(name as string);
@@ -148,6 +203,8 @@ export class McpToolsService extends BaseToolsService {
 	}
 
 	getTool(name: string | ToolName): vscode.LanguageModelToolInformation | undefined {
+		// Trigger initialization if not already done
+		this.ensureInitialized();
 		return this.tools.find(tool => tool.name === name);
 	}
 
@@ -156,10 +213,15 @@ export class McpToolsService extends BaseToolsService {
 		throw new Error('This method for tests only');
 	}
 
-	getEnabledTools(request: vscode.ChatRequest, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): vscode.LanguageModelToolInformation[] {
+	async getEnabledTools(request: vscode.ChatRequest, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): Promise<vscode.LanguageModelToolInformation[]> {
+		// Ensure initialization is complete before filtering tools
+
+		// info logging removed
+		await this.ensureInitializedAsync();
+
 		const toolMap = new Map(this.tools.map(t => [t.name, t]));
 
-		return this.tools.filter(tool => {
+		const enabledTools = this.tools.filter(tool => {
 			// 0. Check if the tool was disabled via the tool picker. If so, it must be disabled here
 			const toolPickerSelection = request.tools.get(getContributedToolName(tool.name));
 			if (toolPickerSelection === false) {
@@ -193,6 +255,8 @@ export class McpToolsService extends BaseToolsService {
 
 			return false;
 		});
+
+		return Promise.resolve(enabledTools);
 	}
 
 	/**
@@ -201,12 +265,11 @@ export class McpToolsService extends BaseToolsService {
 	override dispose(): void {
 		super.dispose();
 
-		for (const [serverName, client] of this.mcpClients) {
+		for (const [, client] of this.mcpClients) {
 			try {
 				client.close();
-				logger.info(`Closed MCP client connection for server: ${serverName}`);
 			} catch (error) {
-				logger.error(`Error closing MCP client for server ${serverName}: ${error}`);
+				// error logging removed
 			}
 		}
 		this.mcpClients.clear();

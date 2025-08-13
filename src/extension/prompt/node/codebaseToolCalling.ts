@@ -66,7 +66,7 @@ export class CodebaseToolCallingLoop extends ToolCallingLoop<ICodebaseToolCallin
 	}
 
 	protected async getAvailableTools(): Promise<LanguageModelToolInformation[]> {
-		return this.toolsService.getEnabledTools(this.options.request, tool => tool.tags.includes('vscode_codesearch'));
+		return await this.toolsService.getEnabledTools(this.options.request, tool => tool.tags.includes('vscode_codesearch'));
 	}
 
 	protected async fetch(messages: Raw.ChatMessage[], finishedCb: FinishedCallback, requestOptions: OptionalChatRequestParams, firstFetchCall: boolean, token: CancellationToken): Promise<ChatResponse> {
