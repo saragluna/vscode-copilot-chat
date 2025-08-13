@@ -195,7 +195,6 @@ export class AgentIntentInvocation extends EditCodeIntentInvocation {
 	}
 
 	public override getAvailableTools(): Promise<vscode.LanguageModelToolInformation[]> {
-		this.logService.logger.debug('xiading: SimulationExtHostToolsService.getAvailableTools');
 		return getTools(this.instantiationService, this.request);
 	}
 

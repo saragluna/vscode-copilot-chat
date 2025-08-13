@@ -28,6 +28,7 @@ import { IGithubRepositoryService } from '../../../platform/github/common/github
 import { GithubRepositoryService } from '../../../platform/github/node/githubRepositoryService';
 import { IIgnoreService } from '../../../platform/ignore/common/ignoreService';
 import { VsCodeIgnoreService } from '../../../platform/ignore/vscode-node/ignoreService';
+import { ILanguageContextProviderService } from '../../../platform/languageContextProvider/common/languageContextProviderService';
 import { ILanguageContextService } from '../../../platform/languageServer/common/languageContextService';
 import { ICompletionsFetchService } from '../../../platform/nesFetch/common/completionsFetchService';
 import { CompletionsFetchService } from '../../../platform/nesFetch/node/completionsFetchServiceImpl';
@@ -92,13 +93,11 @@ import { CodeMapperService, ICodeMapperService } from '../../prompts/node/codeMa
 import { FixCookbookService, IFixCookbookService } from '../../prompts/node/inline/fixCookbookService';
 import { WorkspaceMutationManager } from '../../testing/node/setupTestsFileManager';
 import { IToolsService } from '../../tools/common/toolsService';
-import { McpToolsService } from '../../tools/vscode-node/mcpToolsService';
 import { ToolsService } from '../../tools/vscode-node/toolsService';
 import { LanguageContextServiceImpl } from '../../typescriptContext/vscode-node/languageContextService';
 import { IWorkspaceListenerService } from '../../workspaceRecorder/common/workspaceListenerService';
 import { WorkspacListenerService } from '../../workspaceRecorder/vscode-node/workspaceListenerService';
 import { registerServices as registerCommonServices } from '../vscode/services';
-import { ILanguageContextProviderService } from '../../../platform/languageContextProvider/common/languageContextProviderService';
 
 // ###########################################################################################
 // ###                                                                                     ###

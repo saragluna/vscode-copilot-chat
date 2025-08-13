@@ -5,16 +5,16 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import * as fs from 'fs';
-import * as vscode from 'vscode';
-import { CancellationError, LanguageModelTextPart, LanguageModelToolInformation, LanguageModelToolResult } from 'vscode';
-import { ILogService } from '../../../platform/log/common/logService';
-import { Lazy } from '../../../util/vs/base/common/lazy';
-import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
-import { getContributedToolName, getToolName, mapContributedToolNamesInSchema, mapContributedToolNamesInString, ToolName } from '../common/toolNames';
-import { ICopilotTool } from '../common/toolsRegistry';
-import { BaseToolsService } from '../common/toolsService';
-// eslint-disable-next-line no-duplicate-imports
-import { LanguageModelToolResult2 } from 'vscode';
+import type * as vscode from 'vscode';
+import { getContributedToolName, getToolName, mapContributedToolNamesInSchema, mapContributedToolNamesInString, ToolName } from '../../../src/extension/tools/common/toolNames';
+import { ICopilotTool } from '../../../src/extension/tools/common/toolsRegistry';
+import { BaseToolsService } from '../../../src/extension/tools/common/toolsService';
+import { ILogService } from '../../../src/platform/log/common/logService';
+import { CancellationError } from '../../../src/util/vs/base/common/errors';
+import { Lazy } from '../../../src/util/vs/base/common/lazy';
+import { IInstantiationService } from '../../../src/util/vs/platform/instantiation/common/instantiation';
+import { LanguageModelTextPart, LanguageModelToolInformation, LanguageModelToolResult, LanguageModelToolResult2 } from '../../../src/vscodeTypes';
+import { logger } from '../../simulationLogger';
 
 type McpServers = {
 	servers: {
@@ -104,7 +104,7 @@ export class McpToolsService extends BaseToolsService {
 
 			await Promise.allSettled(initPromises);
 		} catch (error) {
-			// error logging removed
+			logger.error('McpToolsService: Failed to initialize MCP servers', error);
 		}
 	}
 
@@ -138,7 +138,7 @@ export class McpToolsService extends BaseToolsService {
 				cwd: server.cwd ? replaceEnvVariables(server.cwd) : undefined,
 			});
 		} else {
-			// warn logging removed
+			logger.warn(`McpToolsService: Unsupported transport type: ${server.type}`);
 			return; // Unsupported transport type
 		}
 
@@ -161,8 +161,9 @@ export class McpToolsService extends BaseToolsService {
 				// Map tool name to server name for later lookup
 				this.toolToServerMap.set(tool.name, name);
 			}
+			logger.debug(`McpToolsService: Successfully initialized server ${name} with ${mcpTools.length} tools`);
 		} catch (error) {
-			// error logging removed
+			logger.error(`McpToolsService: Failed to initialize server ${name}`, error);
 		}
 	}
 
@@ -183,18 +184,26 @@ export class McpToolsService extends BaseToolsService {
 			throw new Error(`MCP client for server ${serverName} not found`);
 		}
 
-		const result = await mcpClient.callTool({
-			name: name,
-			arguments: options.input as Record<string, unknown>,
-		});
-		if (!result) {
-			throw new CancellationError();
+		logger.debug(`McpToolsService: Invoking tool ${name} on server ${serverName}`);
+		const start = Date.now();
+		try {
+			const result = await mcpClient.callTool({
+				name: name,
+				arguments: options.input as Record<string, unknown>,
+			});
+			if (!result) {
+				throw new CancellationError();
+			}
+			const parts = [];
+			for (const part of result.content as { text: string }[]) {
+				parts.push(new LanguageModelTextPart(part.text as string));
+			}
+			logger.debug(`McpToolsService: Tool ${name} completed in ${Date.now() - start}ms`);
+			return new LanguageModelToolResult(parts);
+		} catch (error) {
+			logger.error(`McpToolsService: Tool ${name} failed in ${Date.now() - start}ms`, error);
+			throw error;
 		}
-		const parts = [];
-		for (const part of result.content as { text: string }[]) {
-			parts.push(new LanguageModelTextPart(part.text as string));
-		}
-		return new LanguageModelToolResult(parts);
 	}
 
 	override getCopilotTool(name: string): ICopilotTool<any> | undefined {
@@ -216,7 +225,7 @@ export class McpToolsService extends BaseToolsService {
 	async getEnabledTools(request: vscode.ChatRequest, filter?: (tool: vscode.LanguageModelToolInformation) => boolean | undefined): Promise<vscode.LanguageModelToolInformation[]> {
 		// Ensure initialization is complete before filtering tools
 
-		// info logging removed
+		logger.info('McpToolsService: Getting enabled tools');
 		await this.ensureInitializedAsync();
 
 		const toolMap = new Map(this.tools.map(t => [t.name, t]));
@@ -256,6 +265,7 @@ export class McpToolsService extends BaseToolsService {
 			return false;
 		});
 
+		logger.debug(`McpToolsService: Returning ${enabledTools.length} enabled tools`);
 		return Promise.resolve(enabledTools);
 	}
 
@@ -269,7 +279,7 @@ export class McpToolsService extends BaseToolsService {
 			try {
 				client.close();
 			} catch (error) {
-				// error logging removed
+				logger.error('McpToolsService: Error closing MCP client', error);
 			}
 		}
 		this.mcpClients.clear();
