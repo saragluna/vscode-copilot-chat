@@ -8,6 +8,9 @@ import { ReadableStream } from 'stream/web';
 import { IEnvService } from '../../env/common/envService';
 import { FetchOptions, IAbortController, Response } from '../common/fetcherService';
 import { IFetcher, userAgentLibraryHeader } from '../common/networking';
+/* eslint-disable local/no-test-imports */
+/* eslint-disable import/no-restricted-paths */
+import { logger } from '../../../../test/simulationLogger';
 
 export abstract class BaseFetchFetcher implements IFetcher {
 
@@ -43,6 +46,8 @@ export abstract class BaseFetchFetcher implements IFetcher {
 		if (signal && !(signal instanceof AbortSignal)) {
 			throw new Error(`Illegal arguments! 'signal' must be an instance of AbortSignal!`);
 		}
+
+		logger.info(`fetch headers: ${JSON.stringify(options.headers, null, 2)}`);
 
 		return this._fetch(url, method, headers, body, signal);
 	}

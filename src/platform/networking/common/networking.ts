@@ -22,6 +22,9 @@ import { TelemetryData } from '../../telemetry/common/telemetryData';
 import { FinishedCallback, OpenAiFunctionTool, OptionalChatRequestParams } from './fetch';
 import { FetchOptions, IAbortController, IFetcherService, Response } from './fetcherService';
 import { ChatCompletion } from './openai';
+/* eslint-disable local/no-test-imports */
+/* eslint-disable import/no-restricted-paths */
+import { logger } from '../../../../test/simulationLogger';
 
 /**
  * Encapsulates all the functionality related to making GET/POST requests using
@@ -217,8 +220,10 @@ function networkRequest(
 		'OpenAI-Intent': intent, // Tells CAPI who flighted this request. Helps find buggy features
 		'X-GitHub-Api-Version': '2025-05-01',
 		...additionalHeaders,
-		...(endpoint.getExtraHeaders ? endpoint.getExtraHeaders() : {}),
+		...endpoint.getExtraHeaders ? endpoint.getExtraHeaders() : {},
 	};
+
+	logger.debug(`headers: ${JSON.stringify(headers, null, 2)}`);
 
 	if (endpoint.interceptBody) {
 		endpoint.interceptBody(body);
@@ -243,7 +248,9 @@ function networkRequest(
 		// pass the controller abort signal to the request
 		request.signal = abort.signal;
 	}
+	logger.debug(`type of endpoint.urlOrRequestMetadata ${typeof endpoint.urlOrRequestMetadata}`);
 	if (typeof endpoint.urlOrRequestMetadata === 'string') {
+		logger.debug("in fetcher.fetch");
 		const requestPromise = fetcher.fetch(endpoint.urlOrRequestMetadata, request).catch(reason => {
 			if (canRetryOnceNetworkError(reason)) {
 				// disconnect and retry the request once if the connection was reset
@@ -259,6 +266,7 @@ function networkRequest(
 		});
 		return requestPromise;
 	} else {
+		logger.debug("in capiClientService.makeRequest");
 		return capiClientService.makeRequest(request, endpoint.urlOrRequestMetadata as RequestMetadata);
 	}
 }

@@ -6,6 +6,9 @@
 import { IEnvService } from '../../env/common/envService';
 import { IFetcherService } from '../../networking/common/fetcherService';
 import { BaseCAPIClientService } from '../common/capiClient';
+/* eslint-disable local/no-test-imports */
+/* eslint-disable import/no-restricted-paths */
+import { logger } from '../../../../test/simulationLogger';
 
 export class CAPIClientImpl extends BaseCAPIClientService {
 
@@ -13,6 +16,7 @@ export class CAPIClientImpl extends BaseCAPIClientService {
 		@IFetcherService fetcherService: IFetcherService,
 		@IEnvService envService: IEnvService
 	) {
+		logger.info(`the hmac is ${process.env.HMAC_SECRET}`);
 		super(process.env.HMAC_SECRET, fetcherService, envService);
 	}
 }
