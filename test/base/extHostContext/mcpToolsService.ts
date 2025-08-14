@@ -142,28 +142,43 @@ export class McpToolsService extends BaseToolsService {
 			return; // Unsupported transport type
 		}
 
-		try {
-			// Create a separate client for each server
-			const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
-			this.mcpClients.set(name, mcpClient);
+		const maxRetries = 5;
+		const retryDelay = 2000; // 2 seconds
 
-			await mcpClient.connect(transport);
-			const mcpTools = (await mcpClient.listTools()).tools;
-			for (const tool of mcpTools) {
-				const info: LanguageModelToolInformation = {
-					name: tool.name,
-					description: tool.description as string,
-					inputSchema: tool.inputSchema,
-					tags: ['vscode_editing'],
-					source: { name: 'mcp', label: `MCP Server: ${name}` },
-				};
-				this.mcpTools.push(info);
-				// Map tool name to server name for later lookup
-				this.toolToServerMap.set(tool.name, name);
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				// Create a separate client for each server
+				const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
+				this.mcpClients.set(name, mcpClient);
+
+				await mcpClient.connect(transport);
+				const mcpTools = (await mcpClient.listTools()).tools;
+				for (const tool of mcpTools) {
+					const info: LanguageModelToolInformation = {
+						name: tool.name,
+						description: tool.description as string,
+						inputSchema: tool.inputSchema,
+						tags: ['vscode_editing'],
+						source: { name: 'mcp', label: `MCP Server: ${name}` },
+					};
+					this.mcpTools.push(info);
+					// Map tool name to server name for later lookup
+					this.toolToServerMap.set(tool.name, name);
+				}
+				logger.debug(`McpToolsService: Successfully initialized server ${name} with ${mcpTools.length} tools on attempt ${attempt}`);
+				return; // Success, exit retry loop
+			} catch (error) {
+				// Clean up failed client
+				this.mcpClients.delete(name);
+
+				if (attempt === maxRetries) {
+					logger.error(`McpToolsService: Failed to initialize server ${name} after ${maxRetries} attempts`, error);
+					return;
+				}
+
+				logger.warn(`McpToolsService: Failed to initialize server ${name} on attempt ${attempt}, retrying in ${retryDelay}ms`, error);
+				await new Promise(resolve => setTimeout(resolve, retryDelay));
 			}
-			logger.debug(`McpToolsService: Successfully initialized server ${name} with ${mcpTools.length} tools`);
-		} catch (error) {
-			logger.error(`McpToolsService: Failed to initialize server ${name}`, error);
 		}
 	}
 
