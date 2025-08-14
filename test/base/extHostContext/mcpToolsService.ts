@@ -202,10 +202,11 @@ export class McpToolsService extends BaseToolsService {
 		logger.debug(`McpToolsService: Invoking tool ${name} on server ${serverName}`);
 		const start = Date.now();
 		try {
+			const invokeToolTimeout = process.env.SIMULATION_INVOKE_TOOL_TIMEOUT ? parseInt(process.env.SIMULATION_INVOKE_TOOL_TIMEOUT, 10) : 60_000;
 			const result = await mcpClient.callTool({
 				name: name,
 				arguments: options.input as Record<string, unknown>,
-			});
+			}, undefined, { timeout: invokeToolTimeout, maxTotalTimeout: invokeToolTimeout });
 			if (!result) {
 				throw new CancellationError();
 			}
