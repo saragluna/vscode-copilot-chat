@@ -151,8 +151,8 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		while (process.env.MCP_SERVERS_INITIALIZED !== 'true' && (Date.now() - startTime) < maxWaitTime) {
 			// Use a synchronous sleep method that doesn't require external dependencies
 			const sleepStart = Date.now();
+			logger.warn('SimulationExtHostToolsService: MCP servers still initializing...');
 			while (Date.now() - sleepStart < checkInterval) {
-				logger.warn('SimulationExtHostToolsService: MCP servers still initializing...');
 			}
 		}
 
