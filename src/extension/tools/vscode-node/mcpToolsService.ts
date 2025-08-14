@@ -207,23 +207,20 @@ export class McpToolsService extends BaseToolsService {
 			throw new Error(`MCP client for server ${serverName} not found`);
 		}
 
-		try {
-			const invokeToolTimeout = process.env.SIMULATION_INVOKE_TOOL_TIMEOUT ? parseInt(process.env.SIMULATION_INVOKE_TOOL_TIMEOUT, 10) : 60_000;
-			const result = await mcpClient.callTool({
-				name: name,
-				arguments: options.input as Record<string, unknown>,
-			}, undefined, { timeout: invokeToolTimeout, maxTotalTimeout: invokeToolTimeout });
-			if (!result) {
-				throw new CancellationError();
-			}
-			const parts = [];
-			for (const part of result.content as { text: string }[]) {
-				parts.push(new LanguageModelTextPart(part.text as string));
-			}
-			return new LanguageModelToolResult(parts);
-		} catch (error) {
-			throw error;
+
+		const invokeToolTimeout = process.env.SIMULATION_INVOKE_TOOL_TIMEOUT ? parseInt(process.env.SIMULATION_INVOKE_TOOL_TIMEOUT, 10) : 60_000;
+		const result = await mcpClient.callTool({
+			name: name,
+			arguments: options.input as Record<string, unknown>,
+		}, undefined, { timeout: invokeToolTimeout, maxTotalTimeout: invokeToolTimeout });
+		if (!result) {
+			throw new CancellationError();
 		}
+		const parts = [];
+		for (const part of result.content as { text: string }[]) {
+			parts.push(new LanguageModelTextPart(part.text as string));
+		}
+		return new LanguageModelToolResult(parts);
 	}
 
 	override getCopilotTool(name: string): ICopilotTool<any> | undefined {
