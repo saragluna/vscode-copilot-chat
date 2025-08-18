@@ -57,7 +57,7 @@ export class TestExecutionInExtension {
 		//@ts-ignore
 		const testConfig: { default: { version: string } } = await import('../.vscode-test.mjs');
 		const [serverBinary, browser] = await Promise.all([
-			downloadAndUnzipVSCode('stable', getServerPlatform()),
+			downloadAndUnzipVSCode('1.104.0-insider', getServerPlatform()),
 			chromium.launch({ headless: ctx.opts.headless }),
 		]);
 		const browserContext = await browser.newContext();
