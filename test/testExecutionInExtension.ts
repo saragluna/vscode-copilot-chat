@@ -12,7 +12,6 @@ import path from 'path';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { SimpleRPC } from '../src/extension/onboardDebug/node/copilotDebugWorker/rpc';
 import { deserializeWorkbenchState } from '../src/platform/test/node/promptContextModel';
-import { waitForListenerOnPort } from '../src/util/node/ports';
 import { createCancelablePromise, DeferredPromise, disposableTimeout, raceCancellablePromises, retry, timeout } from '../src/util/vs/base/common/async';
 import { Emitter, Event } from '../src/util/vs/base/common/event';
 import { Iterable } from '../src/util/vs/base/common/iterator';
@@ -20,13 +19,14 @@ import { Disposable, DisposableStore, toDisposable } from '../src/util/vs/base/c
 import { extUriBiasedIgnorePathCase } from '../src/util/vs/base/common/resources';
 import { URI } from '../src/util/vs/base/common/uri';
 import { generateUuid } from '../src/util/vs/base/common/uuid';
-import { findFreePortFaster } from '../src/util/vs/base/node/ports';
 import { ProxiedSimulationEndpointHealth } from './base/simulationEndpointHealth';
 import { ProxiedSimulationOutcome } from './base/simulationOutcome';
 import { SimulationTest } from './base/stest';
 import { ProxiedSONOutputPrinter } from './jsonOutputPrinter';
 import { logger } from './simulationLogger';
 import { ITestRunResult, SimulationTestContext } from './testExecutor';
+import { findFreePortFaster } from '../src/util/vs/base/node/ports';
+import { waitForListenerOnPort } from '../src/util/node/ports';
 
 const MAX_CONCURRENT_SESSIONS = 10;
 const HOST = '127.0.0.1';
@@ -58,7 +58,7 @@ export class TestExecutionInExtension {
 		//@ts-ignore
 		const testConfig: { default: { version: string } } = await import('../.vscode-test.mjs');
 		const [serverBinary, browser] = await Promise.all([
-			downloadAndUnzipVSCode("1.104.0-insider", getServerPlatform()),
+			downloadAndUnzipVSCode(testConfig.default.version, getServerPlatform()),
 			chromium.launch({ headless: ctx.opts.headless }),
 		]);
 		const browserContext = await browser.newContext();
