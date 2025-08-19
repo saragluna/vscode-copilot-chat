@@ -2855,7 +2855,7 @@
 					},
 					"github.copilot.chat.alternateGptPrompt.enabled": {
 						"type": "boolean",
-						"default": false,
+						"default": true,
 						"tags": [
 							"experimental"
 						],
