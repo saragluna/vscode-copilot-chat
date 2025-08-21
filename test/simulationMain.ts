@@ -57,6 +57,8 @@ const dotSimulationPath = path.join(__dirname, `../${SIMULATION_FOLDER_NAME}`);
 async function main() {
 	const errors: unknown[] = [];
 
+	console.log("***************" + JSON.stringify(process.env, null, 2));
+
 	process.env['SIMULATION'] = '1';
 
 	process.on('unhandledRejection', (reason, promise) => {

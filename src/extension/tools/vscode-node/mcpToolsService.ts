@@ -102,6 +102,8 @@ export class McpToolsService extends BaseToolsService {
 			return;
 		}
 
+		console.log("****************** initializeAsync according to MCP_CONFIG_FILE ******************");
+
 		try {
 			const config = fs.readFileSync(process.env.MCP_CONFIG_FILE, 'utf8');
 			const mcpServers: McpServers = JSON.parse(config);
@@ -111,7 +113,7 @@ export class McpToolsService extends BaseToolsService {
 			for (const [name, server] of Object.entries(mcpServers.servers)) {
 				initPromises.push(this.initializeServer(name, server));
 			}
-
+			console.log("****************** await all MCP servers initialization ******************");
 			await Promise.allSettled(initPromises);
 
 			// Set environment variable to indicate all MCP servers have completed initialization
@@ -130,8 +132,10 @@ export class McpToolsService extends BaseToolsService {
 		env?: Record<string, string>;
 		cwd?: string;
 	}): Promise<void> {
+		console.log("****************** Server config:", JSON.stringify(server, null, 2));
 		let transport;
 		const configuredEnv = server.env ? Object.fromEntries(Object.entries(server.env).map(([key, value]) => [key, replaceEnvVariables(value)])) : undefined;
+		console.log("******************Configured env after variable replacement:", configuredEnv);
 		// combine env with process.env, ensuring all values are strings (no undefined)
 		const rawEnv = configuredEnv ? { ...process.env, ...configuredEnv } : process.env;
 		const combinedEnv: Record<string, string> = {};
@@ -140,8 +144,13 @@ export class McpToolsService extends BaseToolsService {
 				combinedEnv[key] = value;
 			}
 		}
+		console.log("****************** Combined env variables for MCP server:", Object.keys(combinedEnv).filter(k => k.includes('APPMOD') || k.includes('OUTPUT')).reduce((obj, key) => {
+			obj[key] = combinedEnv[key];
+			return obj;
+		}, {} as Record<string, string>));
 
 		if (server.type === 'stdio') {
+			console.log("****************** MCP server type is stdio ******************");
 			transport = new StdioClientTransport({
 				command: replaceEnvVariables(server.command),
 				args: server.args.map((arg: string) => replaceEnvVariables(arg)),
@@ -149,9 +158,12 @@ export class McpToolsService extends BaseToolsService {
 				stderr: 'inherit', // Default behavior, can be customized if needed
 				cwd: server.cwd ? replaceEnvVariables(server.cwd) : undefined,
 			});
+			console.log("****************** transport ******************" + JSON.stringify(transport, null, 2));
 		} else {
 			return; // Unsupported transport type
 		}
+
+		console.log("****************** Prepare to start MCP server ******************");
 
 		const maxRetries = 5;
 		const retryDelay = 2000; // 2 seconds
@@ -162,7 +174,13 @@ export class McpToolsService extends BaseToolsService {
 				const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
 				this.mcpClients.set(name, mcpClient);
 
+				console.log("****************** Start MCP Server ******************; attempt: " + attempt);
 				await mcpClient.connect(transport);
+
+				const now = new Date();
+				const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(2, '0')}`;
+				console.log("****************** Checking MCP Server process existence at " + timeString + " ******************");
+
 				const mcpTools = (await mcpClient.listTools()).tools;
 				for (const tool of mcpTools) {
 					const info: LanguageModelToolInformation = {
@@ -182,6 +200,7 @@ export class McpToolsService extends BaseToolsService {
 				this.mcpClients.delete(name);
 
 				if (attempt === maxRetries) {
+					console.log("****************** Retry max times to start MCP Server, return. ******************");
 					return;
 				}
 
