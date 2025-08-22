@@ -12,6 +12,7 @@ import path from 'path';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { SimpleRPC } from '../src/extension/onboardDebug/node/copilotDebugWorker/rpc';
 import { deserializeWorkbenchState } from '../src/platform/test/node/promptContextModel';
+import { waitForListenerOnPort } from '../src/util/node/ports';
 import { createCancelablePromise, DeferredPromise, disposableTimeout, raceCancellablePromises, retry, timeout } from '../src/util/vs/base/common/async';
 import { Emitter, Event } from '../src/util/vs/base/common/event';
 import { Iterable } from '../src/util/vs/base/common/iterator';
@@ -19,14 +20,13 @@ import { Disposable, DisposableStore, toDisposable } from '../src/util/vs/base/c
 import { extUriBiasedIgnorePathCase } from '../src/util/vs/base/common/resources';
 import { URI } from '../src/util/vs/base/common/uri';
 import { generateUuid } from '../src/util/vs/base/common/uuid';
+import { findFreePortFaster } from '../src/util/vs/base/node/ports';
 import { ProxiedSimulationEndpointHealth } from './base/simulationEndpointHealth';
 import { ProxiedSimulationOutcome } from './base/simulationOutcome';
 import { SimulationTest } from './base/stest';
 import { ProxiedSONOutputPrinter } from './jsonOutputPrinter';
 import { logger } from './simulationLogger';
 import { ITestRunResult, SimulationTestContext } from './testExecutor';
-import { findFreePortFaster } from '../src/util/vs/base/node/ports';
-import { waitForListenerOnPort } from '../src/util/node/ports';
 
 const MAX_CONCURRENT_SESSIONS = 10;
 const HOST = '127.0.0.1';
@@ -134,15 +134,12 @@ export class TestExecutionInExtension {
 		const packageJsonPath = path.resolve(__dirname, '..', 'package.json');
 
 		const extensionDir = path.resolve(__dirname, '..', 'test', 'simulationExtension');
-		const existingVsix = (await fs.readdir(extensionDir)).map(e => path.join(extensionDir, e)).find(f => f.endsWith('.vsix'));
-		if (existingVsix) {
-			const vsixMtime = await fs.stat(existingVsix).then(s => s.mtimeMs);
-			const packageJsonMtime = await fs.stat(packageJsonPath).then(s => s.mtimeMs);
-			if (vsixMtime >= packageJsonMtime) {
-				return existingVsix;
-			}
 
-			await fs.rm(existingVsix, { force: true });
+		// Remove any existing VSIX files
+		const existingVsixFiles = (await fs.readdir(extensionDir)).filter(f => f.endsWith('.vsix'));
+		for (const vsixFile of existingVsixFiles) {
+			logger.info(`Removing existing VSIX file: ${vsixFile}`);
+			await fs.rm(path.join(extensionDir, vsixFile), { force: true });
 		}
 
 		logger.info('Packing extension for simulation test run...');
