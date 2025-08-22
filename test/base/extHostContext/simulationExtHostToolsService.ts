@@ -157,7 +157,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		}
 
 		const javaUpgradeToolsSet = new Set(javaUpgradeToolsFromFile);
-		const tools = this.tools.filter(tool => filter?.(tool) ?? (!this._disabledTools.has(getToolName(tool.name)) && (tool.name.startsWith("appmod") || packageJsonTools.has(tool.name) || javaUpgradeToolsSet.has(tool.name))));
+		const tools = this.tools.filter(tool => filter?.(tool) ?? (!this._disabledTools.has(getToolName(tool.name)) && (packageJsonTools.has(tool.name) || javaUpgradeToolsSet.has(tool.name))));
 
 		this._mcpToolService.getEnabledTools(request, filter);
 
