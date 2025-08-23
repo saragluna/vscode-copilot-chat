@@ -29,7 +29,6 @@ import { CallTracker } from '../../../util/common/telemetryCorrelationId';
 import { Emitter } from '../../../util/vs/base/common/event';
 import { Disposable, MutableDisposable } from '../../../util/vs/base/common/lifecycle';
 import { isDefined, isNumber, isString, isStringArray } from '../../../util/vs/base/common/types';
-import { generateUuid } from '../../../util/vs/base/common/uuid';
 import { localize } from '../../../util/vs/nls';
 import { IInstantiationService } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { ExtensionMode } from '../../../vscodeTypes';
@@ -107,7 +106,7 @@ export class LanguageModelAccess extends Disposable implements IExtensionContrib
 
 		const defaultChatEndpoint = chatEndpoints.find(e => e.isDefault) ?? await this._endpointProvider.getChatEndpoint('gpt-4.1') ?? chatEndpoints[0];
 		if (isAutoModeEnabled(this._expService, this._envService)) {
-			chatEndpoints.push(await this._automodeService.resolveAutoModeEndpoint(generateUuid(), chatEndpoints));
+			chatEndpoints.push(await this._automodeService.resolveAutoModeEndpoint(undefined, chatEndpoints));
 		}
 		const seenFamilies = new Set<string>();
 
@@ -279,7 +278,7 @@ export class CopilotLanguageModelWrapper extends Disposable {
 
 	private async _provideLanguageModelResponse(_endpoint: IChatEndpoint, _messages: Array<vscode.LanguageModelChatMessage | vscode.LanguageModelChatMessage2>, _options: vscode.LanguageModelChatRequestHandleOptions, extensionId: string, callback: FinishedCallback, token: vscode.CancellationToken): Promise<any> {
 
-		const extensionInfo = vscode.extensions.getExtension(extensionId, true);
+		const extensionInfo = extensionId === 'core' ? { packageJSON: { version: this._envService.vscodeVersion } } : vscode.extensions.getExtension(extensionId, true);
 		if (!extensionInfo || typeof extensionInfo.packageJSON.version !== 'string') {
 			throw new Error('Invalid extension information');
 		}
@@ -342,6 +341,9 @@ export class CopilotLanguageModelWrapper extends Disposable {
 				if (prop === 'getExtraHeaders') {
 					return function () {
 						const extraHeaders = target.getExtraHeaders?.() ?? {};
+						if (extensionId === 'core') {
+							return extraHeaders;
+						}
 						return {
 							...extraHeaders,
 							'x-onbehalf-extension-id': `${extensionId}/${extensionVersion}`,
@@ -377,7 +379,7 @@ export class CopilotLanguageModelWrapper extends Disposable {
 			{ type: 'function', function: { name: _options.tools[0].name } } :
 			undefined;
 
-		const result = await endpoint.makeChatRequest('copilotLanguageModelWrapper', messages, callback, token, ChatLocation.Other, { extensionId }, options, true, telemetryProperties);
+		const result = await endpoint.makeChatRequest('copilotLanguageModelWrapper', messages, callback, token, ChatLocation.Other, { extensionId }, options, extensionId !== 'core', telemetryProperties);
 
 		if (result.type !== ChatFetchResponseType.Success) {
 			if (result.type === ChatFetchResponseType.ExtensionBlocked) {
