@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { AzureCliCredential, ChainedTokenCredential, DeviceCodeCredential, InteractiveBrowserCredential, ManagedIdentityCredential, TokenCredential } from '@azure/identity';
+import { AzureCliCredential, ChainedTokenCredential, DefaultAzureCredential, DeviceCodeCredential, InteractiveBrowserCredential, ManagedIdentityCredential, TokenCredential } from '@azure/identity';
 import { SecretClient } from '@azure/keyvault-secrets';
 import * as fs from 'fs';
 import * as process from 'process';
@@ -39,6 +39,12 @@ async function setupSecretClient(vaultUri: string) {
 			}
 		});
 		credentialOptions.push(deviceCodeCredential);
+	}
+
+	// Use DefaultAzureCredential on Windows
+	if (process.platform === 'win32') {
+		console.log("Using DefaultAzureCredential on Windows.");
+		credentialOptions.push(new DefaultAzureCredential({ tenantId: "72f988bf-86f1-41af-91ab-2d7cd011db47" }));
 	}
 
 	const credential = new ChainedTokenCredential(...credentialOptions);
