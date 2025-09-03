@@ -4073,9 +4073,9 @@
 		"undici": "^7.11.0",
 		"vscode-tas-client": "^0.1.84",
 		"web-tree-sitter": "^0.23.0",
-        "@modelcontextprotocol/sdk": "^1.16.0",
-        "@roamhq/mac-ca": "^1.0.7"
-    },
+		"@modelcontextprotocol/sdk": "^1.17.4",
+		"@roamhq/mac-ca": "^1.0.7"
+	},
 	"overrides": {
 		"@aminya/node-gyp-build": "npm:node-gyp-build@4.8.1",
 		"string_decoder": "npm:string_decoder@1.2.0",
