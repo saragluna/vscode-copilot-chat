@@ -101,7 +101,7 @@ export async function simulatePanelCodeMapper(
 
 						const codeBlocks = chatResult?.metadata?.codeBlocks;
 						const logService = accessor.get(ILogService);
-						logService.logger.info(`Chart result: ${JSON.stringify(chatResult)}`);
+						logService.logger.info(`Chat result: ${JSON.stringify(chatResult)}`);
 						if (!Array.isArray(codeBlocks)) {
 							throw new Error('No codeblocks in chat result metadata');
 						}

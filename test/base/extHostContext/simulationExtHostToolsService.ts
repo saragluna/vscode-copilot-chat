@@ -105,11 +105,10 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 				return result;
 			}
 
-			const invokeToolTimeout = process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000;
-			logger.debug('SimulationExtHostToolsService.invokeToolTimeout', invokeToolTimeout);
+			const invokeToolTimeout = (process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000) as number;
 			const r = await raceTimeout(Promise.resolve(this._inner.invokeTool(name, options, token)), <number>invokeToolTimeout);
 			if (!r) {
-				throw new Error(`Tool call timed out after ${invokeToolTimeout} minutes`);
+				throw new Error(`Tool call timed out after ${invokeToolTimeout / 60_000} minutes`);
 			}
 			return r;
 		} catch (e) {
@@ -182,8 +181,28 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			}
 		}
 
+		while (process.env.MCP_SERVERS_INITIALIZED !== 'true' && (Date.now() - startTime) < maxWaitTime) {
+			// Proper synchronous sleep using SharedArrayBuffer and Atomics
+			try {
+				const sharedBuffer = new SharedArrayBuffer(4);
+				const sharedArray = new Int32Array(sharedBuffer);
+				console.log("SimulationExtHostToolsService: MCP servers are still initializing");
+				Atomics.wait(sharedArray, 0, 0, checkInterval);
+			} catch {
+				// Fallback to a much more efficient busy wait
+				const sleepStart = Date.now();
+				while (Date.now() - sleepStart < checkInterval) {
+					// Only check every 10ms instead of continuously
+					if ((Date.now() - sleepStart) % 10 === 0) {
+						// Allow other operations to run
+						continue;
+					}
+				}
+			}
+		}
+
 		if (process.env.MCP_SERVERS_INITIALIZED !== 'true') {
-			logger.warn('SimulationExtHostToolsService: MCP servers initialization timed out');
+			console.log('SimulationExtHostToolsService: MCP servers initialization timed out');
 		}
 
 		const mcpTools = this._mcpToolService.getEnabledTools(request, filter);
@@ -192,12 +211,14 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			allToolsMap.set(t.name, t);
 		}
 		for (const t of mcpTools) {
-			logger.debug(`Get mcpTool: ${t.name}`);
 			allToolsMap.set(t.name, t);
 		}
 		const allTools = Array.from(allToolsMap.values());
 		const toolNames = allTools.map(t => t.name).join(",");
-		logger.debug('SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
+		if (process.env.MCP_SERVERS_INITIALIZED === 'true' && this.counter++ === 0) {
+			logger.debug('SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
+			logger.debug(`SimulationExtHostToolsService.invokeToolTimeout set to ${process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000}`);
+		}
 		return allTools;
 	}
 
