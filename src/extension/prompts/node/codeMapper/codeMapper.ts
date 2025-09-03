@@ -776,7 +776,7 @@ export class CodeMapper {
 			case Completion.FinishReason.Length:
 				throw new CompletionsFetchError('stop_length', requestId, 'Length limit');
 			case Completion.FinishReason.Stop:
-				break; // No error for 'Stop' finish reason
+				throw new CompletionsFetchError("stop", requestId, 'Stop limit');
 			default:
 				assertNever(finishReason);
 		}
