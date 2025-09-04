@@ -27,8 +27,9 @@ Just return the next step without any explanation or additional information.`;
 
 export async function decideNextStep(userPrompt: string): Promise<string> {
 
-	const uri = process.env.AZURE_OPENAI_ENDPOINT;
-	const modelName = process.env.AZURE_OPENAI_DEPLOYMENT;
+	const uri = process.env.APPMOD_AZURE_OPENAI_ENDPOINT || "https://migration-benchmark-kaiqian2.cognitiveservices.azure.com/";
+	const modelName = process.env.APPMOD_AZURE_OPENAI_DEPLOYMENT || "gpt-4.1";
+	const apiVersion = process.env.APPMOD_AZURE_OPENAI_API_VERSION || "2025-01-01-preview";
 
 	if (!uri || !modelName) {
 		throw new Error("Missing required environment variables for OpenAI usage.");
@@ -37,8 +38,8 @@ export async function decideNextStep(userPrompt: string): Promise<string> {
 	const scope = "https://cognitiveservices.azure.com/.default";
 	const azureADTokenProvider = getBearerTokenProvider(credential, scope);
 	const deployment = modelName;
-	const apiVersion = process.env.OPENAI_API_VERSION;
 	const options = { azureADTokenProvider, deployment, apiVersion };
+	(options as AzureClientOptions).endpoint = uri;
 	(options as AzureClientOptions).logLevel = 'debug';
 	const client = new AzureOpenAI(options);
 
