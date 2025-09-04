@@ -18,7 +18,7 @@ const migrationResponseSystemPrompt = `
 You are a helpful assistant that helps the user decide next steps in the migration process.
 According to the input, you will decide the status of migration, the status with following options:
 - ${ResponseType.Completed}: The migration has been completed successfully, it is ended with the migration summary has been created.
-- ${ResponseType.Continue}: The migration is not completed yet or the just migration plan is created, it is wait for your input to continue. 
+- ${ResponseType.Continue}: The migration is not completed yet. Such as just migration plan is created but the migration code is not finished; or the migration summary is not created. it is wait for your input to continue. 
 - ${ResponseType.Canceled}: The operation is canceled for any reason.
 - ${ResponseType.Fail}: The migration is failed, please check the error message and fix it.
 - ${ResponseType.TryAgain}: There is temporary error please try again.

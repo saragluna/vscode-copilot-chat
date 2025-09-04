@@ -214,7 +214,7 @@ export async function simulateEditingScenario(
 		for (let queryIndex = 0; queryIndex < scenario.queries.length; queryIndex++) {
 			const query = scenario.queries[queryIndex];
 
-			console.log(`😈 ${query.query}`);
+			console.log(`😈=== ${query.query}`);
 			if (query.file) {
 				if (isNotebook(query.file)) {
 					const notebook = workspace.getNotebook(query.file);
@@ -496,22 +496,22 @@ export async function simulateEditingScenario(
 
 			const conversation = requestHandler.conversation;
 			const lastResponseMessage = conversation.getLatestTurn().rounds.at(-1)?.response;
-			console.log(`😈=== query.conversation.latestTurn.lastRound.response ${lastResponseMessage}`);
-			console.log(`😈=== query.conversation.toolCallLoop response reason ${conversation.response.reason}`);
+			console.log(`😈=== query response reason ${conversation.response.reason}, query last response message:
+			${lastResponseMessage}`);
 
 			let nextStep;
 			if (conversation.response.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
 				nextStep = await decideNextStep(lastResponseMessage);
-				console.log(`😈=== The next step should be ${nextStep}`);
+				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
 			}
 			if ("Continue" === nextStep) {
 				// Insert a new "Continue" query after the current index
+				const nextQuery = process.env.NEXT_STEP_QUERY || "proceed with the migration";
 				const continueQuery: IScenarioQuery = {
-					query: "/editAgent proceed with the migration",
+					query: `/editAgent ${nextQuery}`,
 					expectedIntent: undefined,
 					validate: async (outcome, workspace, accessor) => assert.ok(true),
 				};
-				console.log(`😈=== Will continue the query`);
 				scenario.queries.splice(queryIndex + 1, 0, continueQuery);
 			}
 

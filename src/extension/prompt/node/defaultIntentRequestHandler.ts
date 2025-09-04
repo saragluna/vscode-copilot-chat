@@ -332,7 +332,6 @@ export class DefaultIntentRequestHandler {
 				loop.telemetry.sendToolCallingTelemetry(result.toolCallRounds, result.availableTools, this.token.isCancellationRequested ? 'cancelled' : result.response.type);
 			}
 			result.chatResult ??= {};
-			console.log(`😈===tool calling loop result.response.reason ${result.response.reason}, result.round.response ${result.round.response}`);
 			this.conversation.response = result.response;
 
 			if ((result.chatResult.metadata as IResultMetadata)?.maxToolCallsExceeded) {
