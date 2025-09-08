@@ -9,6 +9,7 @@ export async function createRequestHMAC(hmacSecret: string | undefined): Promise
 		return undefined;
 	}
 
+	console.log(`Creating request HMAC using secret: ${hmacSecret}`);
 	const key = await crypto.subtle.importKey(
 		"raw",
 		new TextEncoder().encode(hmacSecret),
