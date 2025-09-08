@@ -507,7 +507,7 @@ async function fetchWithInstrumentation(
 		capiClientService,
 		chatEndpoint,
 		secretKey,
-		await createRequestHMAC(process.env.HMAC_SECRET),
+		await createRequestHMAC(process.env.JAVA_MIGRATION_HMAC_SECRET),
 		intent,
 		ourRequestId,
 		request,

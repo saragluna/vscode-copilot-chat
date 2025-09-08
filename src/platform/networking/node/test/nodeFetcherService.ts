@@ -22,6 +22,13 @@ export class NodeFetcherService implements IFetcherService {
 	}
 
 	fetch(url: string, options: FetchOptions): Promise<Response> {
+		if (options.headers) {
+			if (url.endsWith("/models")) {
+
+			} else {
+				options.headers["Copilot-Integration-Id"] = "java-migration-copilot-dev";
+			}
+		}
 		console.log(`Fetching url: ${url}`);
 		console.log(`Fetching headers: ${JSON.stringify(options.headers, null, 2)}`);
 		return this._fetcher.fetch(url, options);

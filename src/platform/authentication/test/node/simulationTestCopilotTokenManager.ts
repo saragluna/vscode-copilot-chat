@@ -136,8 +136,10 @@ class SingletonSimulationTestCopilotTokenManager {
 	getCopilotToken(): Promise<CopilotToken> {
 		if (!this._actual) {
 			if (process.env.GITHUB_PAT) {
+				console.log(`Using GITHUB_PAT ${process.env.GITHUB_PAT}`);
 				this._actual = new SimulationTestFixedCopilotTokenManager(process.env.GITHUB_PAT);
 			} else if (process.env.GITHUB_OAUTH_TOKEN) {
+				console.log(`Using GITHUB_OAUTH_TOKEN ${process.env.GITHUB_OAUTH_TOKEN}`);
 				this._actual = new SimulationTestCopilotTokenManagerFromGitHubToken(process.env.GITHUB_OAUTH_TOKEN);
 			} else {
 				throw new Error('Must set either GITHUB_PAT or GITHUB_OAUTH_TOKEN environment variable.');
