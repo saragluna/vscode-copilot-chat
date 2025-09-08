@@ -22,6 +22,8 @@ export class NodeFetcherService implements IFetcherService {
 	}
 
 	fetch(url: string, options: FetchOptions): Promise<Response> {
+		console.log(`Fetching url: ${url}`);
+		console.log(`Fetching headers: ${JSON.stringify(options.headers, null, 2)}`);
 		return this._fetcher.fetch(url, options);
 	}
 	disconnectAll(): Promise<unknown> {
