@@ -219,7 +219,9 @@ export class McpToolsService extends BaseToolsService {
 				return; // Success, exit retry loop
 			} catch (error) {
 				// Clean up failed client
-				this.mcpClients.delete(name);
+				this.mcpClients.delete(name); 
+
+				// stdio client will fork a process for connection, should be disposed explicitly.
 
 				if (attempt === maxRetries) {
 					return;
