@@ -157,11 +157,19 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			}
 		}
 
+		// Force-enable specific tools provided by the 'graphragcode' MCP server
+		const graphragcodeToolNames = new Set([
+			'find_element_location',
+			'query_code',
+			'select_files_related_to'
+		]);
+
 		const tools = this.tools.filter(
 			tool => filter?.(tool) ?? (
 				!this._disabledTools.has(getToolName(tool.name))
 				&& (
 					(process.env.JAVA_UPGRADE_TOOLS && tool.name.startsWith("appmod"))
+					|| graphragcodeToolNames.has(tool.name)
 					|| packageJsonTools.has(tool.name)
 					|| allowedToolsSet.has(tool.name)
 				)
@@ -186,18 +194,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			logger.warn('SimulationExtHostToolsService: MCP servers initialization timed out');
 		}
 
-		// Force-enable specific tools provided by the 'graphragcode' MCP server
-		const graphragcodeToolNames = new Set([
-			'find_element_location',
-			'query_code',
-			'select_files_related_to'
-		]);
-		const mcpTools = this._mcpToolService.getEnabledTools(request, (t) => {
-			if (graphragcodeToolNames.has(t.name)) {
-				return true; // Always enabled
-			}
-			return filter?.(t);
-		});
+		const mcpTools = this._mcpToolService.getEnabledTools(request, filter);
 		const allToolsMap = new Map<string, LanguageModelToolInformation>();
 		for (const t of tools) {
 			allToolsMap.set(t.name, t);

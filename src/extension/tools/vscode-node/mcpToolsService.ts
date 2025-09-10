@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CancellationError, LanguageModelTextPart, LanguageModelToolInformation, LanguageModelToolResult } from 'vscode';
@@ -219,7 +219,7 @@ export class McpToolsService extends BaseToolsService {
 				return; // Success, exit retry loop
 			} catch (error) {
 				// Clean up failed client
-				this.mcpClients.delete(name); 
+				this.mcpClients.delete(name);
 
 				// stdio client will fork a process for connection, should be disposed explicitly.
 
