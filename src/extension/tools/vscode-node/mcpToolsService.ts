@@ -153,7 +153,7 @@ export class McpToolsService extends BaseToolsService {
 			// If an error object was passed in options, we treat this as a fallback to SSE.
 			// This preserves the original semantics: when an error occurred previously, prefer SSE.
 			if (options.err) {
-				return new SSEClientTransport(server.url);
+				return new SSEClientTransport(new URL(server.url));
 			}
 
 			return new StreamableHTTPClientTransport(new URL(server.url));
