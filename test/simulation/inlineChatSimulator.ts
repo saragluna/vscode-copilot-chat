@@ -377,7 +377,10 @@ export async function simulateEditingScenario(
 			};
 
 			if (process.env.SIMULATION_MODE_INSTRUCTIONS) {
-				request.modeInstructions = await readFileIfExists(process.env.SIMULATION_MODE_INSTRUCTIONS);
+				const temp1 = await readFileIfExists(process.env.SIMULATION_MODE_INSTRUCTIONS);
+				const copilotPath = path.join(process.env.process.env.TESTBED_DIR, process.env.SIMULATION_MODE_INSTRUCTIONS)
+				const temp2 = await readFileIfExists(copilotPath);
+				request.modeInstructions = temp1 || temp2;
 			}
 
 			// Run intent detection
