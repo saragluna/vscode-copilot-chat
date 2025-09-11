@@ -40,6 +40,7 @@ import { IInstantiationService } from '../../src/util/vs/platform/instantiation/
 import { ChatLocation, ChatRequest, ChatRequestEditorData, ChatResponseMarkdownPart, ChatResponseNotebookEditPart, ChatResponseTextEditPart, Diagnostic, DiagnosticRelatedInformation, Location, Range, Selection, TextEdit, Uri, WorkspaceEdit } from '../../src/vscodeTypes';
 import { SimulationExtHostToolsService } from '../base/extHostContext/simulationExtHostToolsService';
 import { SimulationWorkspaceExtHost } from '../base/extHostContext/simulationWorkspaceExtHost';
+import { readFileIfExists } from '../base/fileUtils';
 import { SpyingChatMLFetcher } from '../base/spyingChatMLFetcher';
 import { ISimulationTestRuntime, NonExtensionConfiguration } from '../base/stest';
 import { createWorkingSetFileVariable, parseQueryForTest } from '../e2e/testHelper';
@@ -49,7 +50,6 @@ import { convertTestToVSCodeDiagnostics } from './diagnosticProviders/utils';
 import { SimulationLanguageFeaturesService } from './language/simulationLanguageFeatureService';
 import { IDiagnostic, IDiagnosticComparison, INLINE_CHANGED_DOC_TAG, INLINE_INITIAL_DOC_TAG, INLINE_STATE_TAG, IRange, IWorkspaceState, IWorkspaceStateFile } from './shared/sharedTypes';
 import { DiagnosticProviderId, EditTestStrategy, IDeserializedWorkspaceStateBasedScenario, IInlineEdit, IOutcome, IScenario, IScenarioDiagnostic, IScenarioQuery, OutcomeAnnotation } from './types';
-import { readFileIfExists } from '../base/fileUtils';
 
 export type SimulationWorkspaceInput = { files: IFile[]; workspaceFolders?: Uri[] } | { workspaceState: IDeserializedWorkspaceState };
 
@@ -377,8 +377,10 @@ export async function simulateEditingScenario(
 			};
 
 			if (process.env.SIMULATION_MODE_INSTRUCTIONS) {
-				const temp1 = await readFileIfExists(process.env.SIMULATION_MODE_INSTRUCTIONS);
-				const copilotPath = path.join(process.env.process.env.TESTBED_DIR, process.env.SIMULATION_MODE_INSTRUCTIONS)
+				const instructionsFile = process.env.SIMULATION_MODE_INSTRUCTIONS;
+				const temp1 = await readFileIfExists(instructionsFile);
+				// Assumption: TESTBED_DIR is always defined in this environment
+				const copilotPath = path.join(process.env.TESTBED_DIR!, instructionsFile);
 				const temp2 = await readFileIfExists(copilotPath);
 				request.modeInstructions = temp1 || temp2;
 			}
