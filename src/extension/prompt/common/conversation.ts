@@ -15,6 +15,7 @@ import { Location, Range } from '../../../vscodeTypes';
 import { InternalToolReference, IToolCallRound } from '../common/intents';
 import { ChatVariablesCollection } from './chatVariablesCollection';
 import { ToolCallRound } from './toolCallRound';
+import { ChatResponse } from '../../../platform/chat/common/commonTypes';
 export { PromptReference } from '@vscode/prompt-tsx';
 
 export enum TurnStatus {
@@ -190,7 +191,7 @@ export interface IConversationState {
 export class Conversation {
 
 	private readonly _turns: Turn[] = [];
-
+	private _response: ChatResponse | undefined;
 	constructor(
 		readonly sessionId: string,
 		turns: Turn[]
@@ -205,6 +206,14 @@ export class Conversation {
 
 	getLatestTurn(): Turn {
 		return this._turns.at(-1)!; // safe, we checked for length in the ctor
+	}
+
+	get response(): ChatResponse {
+		return this._response;
+	}
+
+	set response(value: ChatResponse) {
+		this._response = value;
 	}
 }
 

@@ -98,26 +98,25 @@ export class McpToolsService extends BaseToolsService {
 	 * Asynchronously initialize MCP clients and tools
 	 */
 	private async initializeAsync(): Promise<void> {
-		if (process.env.MCP_CONFIG_FILE === undefined) {
-			return;
-		}
-
 		try {
-			const config = fs.readFileSync(process.env.MCP_CONFIG_FILE, 'utf8');
-			const mcpServers: McpServers = JSON.parse(config);
+			let mcpServers: McpServers = { servers: {} };
 
-			const initPromises: Promise<void>[] = [];
+			if (process.env.MCP_CONFIG_FILE !== undefined) {
+				const config = fs.readFileSync(process.env.MCP_CONFIG_FILE, 'utf8');
+				mcpServers = JSON.parse(config);
+				const initPromises: Promise<void>[] = [];
 
-			for (const [name, server] of Object.entries(mcpServers.servers)) {
-				initPromises.push(this.initializeServer(name, server));
+				for (const [name, server] of Object.entries(mcpServers.servers)) {
+					initPromises.push(this.initializeServer(name, server));
+				}
+				await Promise.allSettled(initPromises);
 			}
-
-			await Promise.allSettled(initPromises);
-
-			// Set environment variable to indicate all MCP servers have completed initialization
-			process.env.MCP_SERVERS_INITIALIZED = 'true';
 		} catch (error) {
+			console.error(error);
+			return Promise.reject(error);
 		}
+		// Set environment variable to indicate all MCP servers have completed initialization
+		process.env.MCP_SERVERS_INITIALIZED = 'true';
 	}
 
 	/**
