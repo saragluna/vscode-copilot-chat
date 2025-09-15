@@ -161,7 +161,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 				!this._disabledTools.has(getToolName(tool.name))
 				&& (
 					(process.env.JAVA_UPGRADE_TOOLS && tool.name.startsWith("appmod"))
-					|| packageJsonTools.has(tool.name)
+					|| (packageJsonTools.has(tool.name) && tool.name !== 'semantic_search')
 					|| allowedToolsSet.has(tool.name)
 				)
 			)
