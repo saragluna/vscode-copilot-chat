@@ -379,9 +379,15 @@ export async function simulateEditingScenario(
 			if (process.env.SIMULATION_MODE_INSTRUCTIONS) {
 				const instructionsFile = process.env.SIMULATION_MODE_INSTRUCTIONS;
 				const temp1 = await readFileIfExists(instructionsFile);
+				if (temp1) {
+					console.log(`SIMULATION_MODE_INSTRUCTIONS: Found instructions file at ${instructionsFile}`);
+				}
 				// Assumption: TESTBED_DIR is always defined in this environment
 				const copilotPath = path.join(process.env.TESTBED_DIR!, instructionsFile);
 				const temp2 = await readFileIfExists(copilotPath);
+				if (temp2) {
+					console.log(`SIMULATION_MODE_INSTRUCTIONS: Found instructions file at ${copilotPath}`);
+				}
 				request.modeInstructions = temp1 || temp2;
 			}
 
