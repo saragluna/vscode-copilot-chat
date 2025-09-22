@@ -88,6 +88,7 @@ export class CustomInstructionsService implements ICustomInstructionsService {
 	}
 
 	public async fetchInstructionsFromSetting(configKey: Config<CodeGenerationInstruction[]>): Promise<ICustomInstructions[]> {
+		this.logService.debug(`[CustomInstructionsService] fetchInstructionsFromSetting start: ${configKey.fullyQualifiedId}`);
 		const result: ICustomInstructions[] = [];
 
 		const instructions: IInstruction[] = [];
@@ -95,9 +96,11 @@ export class CustomInstructionsService implements ICustomInstructionsService {
 
 		const inspect = this.configurationService.inspectConfig(configKey);
 		if (inspect) {
+			this.logService.debug(`[CustomInstructionsService] fetchInstructionsFromSetting collecting from setting: ${configKey.fullyQualifiedId}`);
 			await this.collectInstructionsFromSettings([inspect.workspaceFolderValue, inspect.workspaceValue, inspect.globalValue], seenFiles, instructions, result);
 		}
 
+		this.logService.debug(`[CustomInstructionsService] fetchInstructionsFromSetting collected inline=${instructions.length} fileGroups=${result.filter(r => r.kind === CustomInstructionsKind.File).length}`);
 		const reference = Uri.from({ scheme: this.envService.uriScheme, authority: 'settings', path: `/${configKey.fullyQualifiedId}` });
 		if (instructions.length > 0) {
 			result.push({
@@ -105,6 +108,9 @@ export class CustomInstructionsService implements ICustomInstructionsService {
 				content: instructions,
 				reference,
 			});
+			this.logService.debug(`[CustomInstructionsService] added setting instructions group for ${configKey.fullyQualifiedId}`);
+		} else {
+			this.logService.debug(`[CustomInstructionsService] no inline setting instructions for ${configKey.fullyQualifiedId}`);
 		}
 		return result;
 	}
@@ -116,11 +122,19 @@ export class CustomInstructionsService implements ICustomInstructionsService {
 				for (const entry of instructionsArray) {
 					if (isCodeGenerationImportInstruction(entry) && !seenFiles.has(entry.file)) {
 						seenFiles.add(entry.file);
+						this.logService.debug(`[CustomInstructionsService] importing file instruction '${entry.file}' lang=${entry.language ?? 'any'}`);
 						await this._collectInstructionsFromFile(entry.file, entry.language, result);
+					}
+					else if (isCodeGenerationImportInstruction(entry)) {
+						this.logService.debug(`[CustomInstructionsService] skipping duplicate file instruction '${entry.file}'`);
 					}
 					if (isCodeGenerationTextInstruction(entry) && !seenInstructions.has(entry.text)) {
 						seenInstructions.add(entry.text);
 						instructions.push({ instruction: entry.text, languageId: entry.language });
+						this.logService.debug(`[CustomInstructionsService] added inline text instruction len=${entry.text.length} lang=${entry.language ?? 'any'}`);
+					}
+					else if (isCodeGenerationTextInstruction(entry)) {
+						this.logService.debug('[CustomInstructionsService] skipping duplicate inline text instruction');
 					}
 				}
 			}
@@ -164,6 +178,7 @@ export class CustomInstructionsService implements ICustomInstructionsService {
 			return false;
 		}
 		if (uri.scheme === Schemas.vscodeUserData) {
+			this.logService.debug(`[CustomInstructionsService] classify external (userData) ${uri.toString()}`);
 			return true;
 		}
 		if (uri.scheme !== Schemas.file) {
@@ -180,11 +195,13 @@ export class CustomInstructionsService implements ICustomInstructionsService {
 				if (value === true && isAbsolute(location)) {
 					const pathToMatch = location.endsWith('/') || location.endsWith('*') ? instructionFolderPath : location;
 					if (match(pathToMatch, location)) {
+						this.logService.debug(`[CustomInstructionsService] classify external (matched) ${uri.toString()} location=${location}`);
 						return true;
 					}
 				}
 			}
 		}
+		this.logService.debug(`[CustomInstructionsService] classify external (default) ${uri.toString()}`);
 		return true;
 	}
 }

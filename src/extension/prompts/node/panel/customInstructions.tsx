@@ -6,6 +6,7 @@
 import { BasePromptElementProps, PromptElement, PromptReference, PromptSizing, TextChunk } from '@vscode/prompt-tsx';
 import { ConfigKey } from '../../../../platform/configuration/common/configurationService';
 import { CustomInstructionsKind, ICustomInstructions, ICustomInstructionsService } from '../../../../platform/customInstructions/common/customInstructionsService';
+import { ILogService } from '../../../../platform/log/common/logService';
 import { IPromptPathRepresentationService } from '../../../../platform/prompts/common/promptPathRepresentationService';
 import { isUri } from '../../../../util/common/types';
 import { isString } from '../../../../util/vs/base/common/types';
@@ -45,10 +46,12 @@ export interface CustomInstructionsProps extends BasePromptElementProps {
 }
 
 export class CustomInstructions extends PromptElement<CustomInstructionsProps> {
+	private _didLogOnce = false;
 	constructor(
 		props: CustomInstructionsProps,
 		@ICustomInstructionsService private readonly customInstructionsService: ICustomInstructionsService,
-		@IPromptPathRepresentationService private readonly promptPathRepresentationService: IPromptPathRepresentationService
+		@IPromptPathRepresentationService private readonly promptPathRepresentationService: IPromptPathRepresentationService,
+		@ILogService private readonly logService: ILogService,
 	) {
 		super(props);
 	}
@@ -58,6 +61,18 @@ export class CustomInstructions extends PromptElement<CustomInstructionsProps> {
 		const includeSystemMessageConflictWarning = this.props.includeSystemMessageConflictWarning ?? true;
 
 		const chunks = [];
+
+		if (!this._didLogOnce) {
+			this._didLogOnce = true;
+			this.logService.debug('[CustomInstructions] render start ' + JSON.stringify({
+				includeCodeGenerationInstructions: includeCodeGenerationInstructions !== false,
+				includeTestGenerationInstructions: !!includeTestGenerationInstructions,
+				includeCodeFeedbackInstructions: !!includeCodeFeedbackInstructions,
+				includeCommitMessageGenerationInstructions: !!includeCommitMessageGenerationInstructions,
+				includePullRequestDescriptionGenerationInstructions: !!includePullRequestDescriptionGenerationInstructions,
+				languageId: this.props.languageId
+			}));
+		}
 
 		if (includeCodeGenerationInstructions !== false && this.props.chatVariables) {
 			for (const variable of this.props.chatVariables) {
@@ -100,10 +115,13 @@ export class CustomInstructions extends PromptElement<CustomInstructionsProps> {
 			}
 		}
 		if (chunks.length === 0) {
+			this.logService.debug('[CustomInstructions] no instructions produced');
 			return undefined;
 		}
 		const introduction = customIntroduction ?? 'When generating code, please follow these user provided coding instructions.';
 		const systemMessageConflictWarning = includeSystemMessageConflictWarning && ' You can ignore an instruction if it contradicts a system message.';
+
+		this.logService.debug('[CustomInstructions] final chunk count ' + chunks.length);
 
 		return (<>
 			{introduction}{systemMessageConflictWarning}<br />
