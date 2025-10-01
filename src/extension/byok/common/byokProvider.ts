@@ -5,7 +5,7 @@
 import type { Disposable, LanguageModelChatInformation, LanguageModelChatProvider, LanguageModelDataPart, LanguageModelTextPart, LanguageModelThinkingPart, LanguageModelToolCallPart } from 'vscode';
 import { CopilotToken } from '../../../platform/authentication/common/copilotToken';
 import { ICAPIClientService } from '../../../platform/endpoint/common/capiClient';
-import { IChatModelInformation } from '../../../platform/endpoint/common/endpointProvider';
+import { EndpointEditToolName, IChatModelInformation } from '../../../platform/endpoint/common/endpointProvider';
 import { TokenizerType } from '../../../util/common/tokenizer';
 import { localize } from '../../../util/vs/nls';
 
@@ -54,6 +54,7 @@ export interface BYOKModelCapabilities {
 	toolCalling: boolean;
 	vision: boolean;
 	thinking?: boolean;
+	editTools?: EndpointEditToolName[];
 }
 
 export interface BYOKModelRegistry {
@@ -122,7 +123,7 @@ export function resolveModelInfo(modelId: string, providerName: string, knownMod
 		version: '1.0.0',
 		capabilities: {
 			type: 'chat',
-			family: providerName,
+			family: modelId,
 			supports: {
 				streaming: true,
 				tool_calls: !!knownModelInfo?.toolCalling,

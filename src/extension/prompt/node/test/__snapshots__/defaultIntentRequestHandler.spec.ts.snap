@@ -137,6 +137,7 @@ exports[`defaultIntentRequestHandler > avoids requests when handler return is nu
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -357,92 +358,28 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
 exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and continues to iterate 3`] = `
 [
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "0",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "1",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "2",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "3",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseConfirmationPart {
     "buttons": [
@@ -452,107 +389,32 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
     "data": {
       "copilotRequestedRoundLimit": 5,
     },
-    "message": MarkdownString {
-      "delegate": MarkdownString {
-        "isTrusted": {
-          "enabledCommands": [
-            "workbench.action.openSettings",
-          ],
-        },
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "Copilot has been working on this problem for a while. It can continue to iterate, or you can send a new message to refine your prompt. [Configure max requests](command:workbench.action.openSettings?%5B%22chat.agent.maxRequests%22%5D).",
-      },
-    },
+    "message": MarkdownString {},
     "title": "Continue to iterate?",
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "4",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "5",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "6",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "response number ",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseMarkdownPart {
-    "value": MarkdownString {
-      "delegate": MarkdownString {
-        "baseUri": undefined,
-        "isTrusted": undefined,
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "7",
-      },
-    },
+    "value": MarkdownString {},
   },
   ChatResponseConfirmationPart {
     "buttons": [
@@ -562,18 +424,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
     "data": {
       "copilotRequestedRoundLimit": 5,
     },
-    "message": MarkdownString {
-      "delegate": MarkdownString {
-        "isTrusted": {
-          "enabledCommands": [
-            "workbench.action.openSettings",
-          ],
-        },
-        "supportHtml": false,
-        "supportThemeIcons": false,
-        "value": "Copilot has been working on this problem for a while. It can continue to iterate, or you can send a new message to refine your prompt. [Configure max requests](command:workbench.action.openSettings?%5B%22chat.agent.maxRequests%22%5D).",
-      },
-    },
+    "message": MarkdownString {},
     "title": "Continue to iterate?",
   },
 ]
@@ -590,6 +441,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -740,6 +592,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -750,6 +603,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -806,6 +660,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -823,6 +678,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -973,6 +829,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -983,6 +840,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -1039,6 +897,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -1056,6 +915,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -1206,6 +1066,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -1216,6 +1077,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -1272,6 +1134,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -1289,6 +1152,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -1439,6 +1303,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -1449,6 +1314,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -1505,6 +1371,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -1572,6 +1439,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -1722,6 +1590,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -1732,6 +1601,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -1788,6 +1658,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -1805,6 +1676,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -1955,6 +1827,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -1965,6 +1838,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -2021,6 +1895,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -2038,6 +1913,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -2188,6 +2064,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -2198,6 +2075,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -2254,6 +2132,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -2271,6 +2150,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -2421,6 +2301,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -2431,6 +2312,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -2487,6 +2369,7 @@ exports[`defaultIntentRequestHandler > confirms on max tool call iterations, and
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -2582,6 +2465,7 @@ exports[`defaultIntentRequestHandler > makes a successful request with a single 
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -2732,6 +2616,7 @@ exports[`defaultIntentRequestHandler > makes a successful request with a single 
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -2742,6 +2627,7 @@ exports[`defaultIntentRequestHandler > makes a successful request with a single 
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -2798,6 +2684,7 @@ exports[`defaultIntentRequestHandler > makes a successful request with a single 
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -2916,6 +2803,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -3066,6 +2954,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -3076,6 +2965,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -3132,6 +3022,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",
@@ -3149,6 +3040,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "contextTypes": "none",
@@ -3299,6 +3191,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "promptTokenCount": 10,
         "responseTokenCount": 4,
         "round": 0,
+        "summarizationEnabled": 1,
         "temporalCtxFileCount": -1,
         "temporalCtxTotalCharCount": -1,
         "textBlocks": 1,
@@ -3309,6 +3202,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "userPromptCount": 1,
       },
       "properties": {
+        "apiType": undefined,
         "codeBlocks": "",
         "command": "test",
         "contextTypes": "none",
@@ -3365,6 +3259,7 @@ exports[`defaultIntentRequestHandler > makes a tool call turn 2`] = `
         "turnNumber": 1,
       },
       "properties": {
+        "apiType": undefined,
         "baseModel": "gpt-4.1-2025-04-14",
         "chatLocation": "panel",
         "intent": "test",

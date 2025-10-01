@@ -4,18 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { PromptReference, Raw } from '@vscode/prompt-tsx';
-import type { ChatRequestEditedFileEvent, ChatResponseStream, ChatResult, LanguageModelToolResult } from 'vscode';
+import type { ChatRequest, ChatRequestEditedFileEvent, ChatResponseStream, ChatResult, LanguageModelToolResult } from 'vscode';
+import { ChatResponse } from '../../../platform/chat/common/commonTypes';
 import { FilterReason } from '../../../platform/networking/common/openai';
+import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { isLocation, toLocation } from '../../../util/common/types';
 import { ResourceMap } from '../../../util/vs/base/common/map';
 import { assertType } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
 import { generateUuid } from '../../../util/vs/base/common/uuid';
+import { ServicesAccessor } from '../../../util/vs/platform/instantiation/common/instantiation';
 import { Location, Range } from '../../../vscodeTypes';
 import { InternalToolReference, IToolCallRound } from '../common/intents';
 import { ChatVariablesCollection } from './chatVariablesCollection';
 import { ToolCallRound } from './toolCallRound';
-import { ChatResponse } from '../../../platform/chat/common/commonTypes';
 export { PromptReference } from '@vscode/prompt-tsx';
 
 export enum TurnStatus {
@@ -63,12 +65,27 @@ export class Turn {
 
 	public readonly startTime = Date.now();
 
+	static fromRequest(
+		id: string | undefined,
+		request: ChatRequest
+	) {
+		return new Turn(
+			id,
+			{ message: request.prompt, type: 'user' },
+			new ChatVariablesCollection(request.references),
+			request.toolReferences.map(InternalToolReference.from),
+			request.editedFileEvents,
+			request.acceptedConfirmationData
+		);
+	}
+
 	constructor(
 		readonly id: string = generateUuid(),
 		readonly request: TurnMessage,
 		private readonly _promptVariables: ChatVariablesCollection | undefined = undefined,
 		private readonly _toolReferences: readonly InternalToolReference[] = [],
-		readonly editedFileEvents?: ChatRequestEditedFileEvent[]
+		readonly editedFileEvents?: ChatRequestEditedFileEvent[],
+		readonly acceptedConfirmationData?: any[]
 	) { }
 
 	get promptVariables(): ChatVariablesCollection | undefined {
@@ -208,7 +225,7 @@ export class Conversation {
 		return this._turns.at(-1)!; // safe, we checked for length in the ctor
 	}
 
-	get response(): ChatResponse {
+	get response(): ChatResponse | undefined {
 		return this._response;
 	}
 
@@ -325,6 +342,7 @@ export interface IResultMetadata {
 	/** The user message exactly as it must be rendered in history. Should not be optional, but not every prompt will adopt this immediately */
 	renderedUserMessage?: Raw.ChatCompletionContentPart[];
 	renderedGlobalContext?: Raw.ChatCompletionContentPart[];
+	globalContextCacheKey?: string;
 	command?: string;
 	filterCategory?: FilterReason;
 
@@ -357,5 +375,11 @@ export class RenderedUserMessageMetadata {
 export class GlobalContextMessageMetadata {
 	constructor(
 		readonly renderedGlobalContext: Raw.ChatCompletionContentPart[],
+		readonly cacheKey: string
 	) { }
+}
+
+export function getGlobalContextCacheKey(accessor: ServicesAccessor): string {
+	const workspaceService = accessor.get(IWorkspaceService);
+	return workspaceService.getWorkspaceFolders().map(folder => folder.toString()).join(',');
 }
