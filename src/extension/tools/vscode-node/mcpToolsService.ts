@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { CancellationError, LanguageModelTextPart, LanguageModelToolInformation, LanguageModelToolResult } from 'vscode';
@@ -119,6 +121,47 @@ export class McpToolsService extends BaseToolsService {
 		process.env.MCP_SERVERS_INITIALIZED = 'true';
 	}
 
+	private constructServerTransport(server: {
+		type: string;
+		command: string;
+		args: string[];
+		env?: Record<string, string>;
+		cwd?: string;
+		url?: string;
+	}, options: {
+		env?: Record<string, string>;
+		err?: unknown;
+	}): StdioClientTransport | StreamableHTTPClientTransport | SSEClientTransport | undefined {
+		// Fast path for stdio servers
+		if (server.type === 'stdio') {
+			return new StdioClientTransport({
+				command: replaceEnvVariables(server.command),
+				args: server.args.map((arg: string) => replaceEnvVariables(arg)),
+				env: options.env,
+				stderr: 'inherit', // Default behavior, can be customized if needed
+				cwd: server.cwd ? replaceEnvVariables(server.cwd) : undefined,
+			});
+		}
+
+		// HTTP-based transports
+		if (server.type === 'http') {
+			if (!server.url) {
+				return; // Missing URL for http server
+			}
+
+			// If an error object was passed in options, we treat this as a fallback to SSE.
+			// This preserves the original semantics: when an error occurred previously, prefer SSE.
+			if (options.err) {
+				return new SSEClientTransport(new URL(server.url));
+			}
+
+			return new StreamableHTTPClientTransport(new URL(server.url));
+		}
+
+		// Unsupported transport type
+		return undefined;
+	}
+
 	/**
 	 * Initialize a single MCP server
 	 */
@@ -128,7 +171,9 @@ export class McpToolsService extends BaseToolsService {
 		args: string[];
 		env?: Record<string, string>;
 		cwd?: string;
+		url?: string;
 	}): Promise<void> {
+		this.logService.info(`[MCP] Initializing server '${name}' (type='${server.type}')`);
 		let transport;
 		const configuredEnv = server.env ? Object.fromEntries(Object.entries(server.env).map(([key, value]) => [key, replaceEnvVariables(value)])) : undefined;
 		// combine env with process.env, ensuring all values are strings (no undefined)
@@ -140,22 +185,22 @@ export class McpToolsService extends BaseToolsService {
 			}
 		}
 
-		if (server.type === 'stdio') {
-			transport = new StdioClientTransport({
-				command: replaceEnvVariables(server.command),
-				args: server.args.map((arg: string) => replaceEnvVariables(arg)),
-				env: combinedEnv,
-				stderr: 'inherit', // Default behavior, can be customized if needed
-				cwd: server.cwd ? replaceEnvVariables(server.cwd) : undefined,
-			});
-		} else {
-			return; // Unsupported transport type
+		transport = this.constructServerTransport(server, {
+			env: combinedEnv
+		});
+
+		if (!transport) {
+			this.logService.warn(`[MCP] Skipping server '${name}' due to unsupported transport type '${server.type}'.`);
+			return;
 		}
+
+		this.logService.debug(`[MCP] Created transport for server '${name}'. Beginning connection attempts...`);
 
 		const maxRetries = 5;
 		const retryDelay = 2000; // 2 seconds
 
 		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			this.logService.info(`[MCP] Connecting to server '${name}' (attempt ${attempt}/${maxRetries})`);
 			try {
 				// Create a separate client for each server
 				const mcpClient = new Client({ name: `mcp-client-${name}`, version: '1.0.0' });
@@ -175,12 +220,26 @@ export class McpToolsService extends BaseToolsService {
 					// Map tool name to server name for later lookup
 					this.toolToServerMap.set(tool.name, name);
 				}
+				this.logService.info(`[MCP] Connected to server '${name}'. Registered ${mcpTools.length} tool(s).`);
 				return; // Success, exit retry loop
 			} catch (error) {
 				// Clean up failed client
 				this.mcpClients.delete(name);
+				this.logService.warn(`[MCP] Failed to connect to server '${name}' on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : String(error)}`);
+
+				// stdio client will fork a process for connection, should be disposed explicitly.
 
 				if (attempt === maxRetries) {
+					this.logService.error(`[MCP] Exhausted retries. Giving up on server '${name}'.`);
+					return;
+				}
+
+				transport = this.constructServerTransport(server, {
+					env: combinedEnv,
+					err: error
+				});
+				if (!transport) {
+					this.logService.error(`[MCP] Could not reconstruct transport for server '${name}' after failure; aborting further retries.`);
 					return;
 				}
 
@@ -247,19 +306,28 @@ export class McpToolsService extends BaseToolsService {
 		const toolMap = new Map(this.tools.map(t => [t.name, t]));
 
 		return this.tools.filter(tool => {
+			// Track decision state for debug purposes
+			let decisionReason = 'default';
+
 			// 0. Check if the tool was disabled via the tool picker. If so, it must be disabled here
 			const toolPickerSelection = request.tools.get(getContributedToolName(tool.name));
 			if (toolPickerSelection === undefined) {
+				decisionReason = 'noPickerSelection';
+				this.logService.debug(`[MCP][tools] '${tool.name}': enabled (reason=${decisionReason})`);
 				return true;
 			}
 
 			if (toolPickerSelection === false) {
+				decisionReason = 'pickerDisabledButLogicAllows'; // current logic returns true regardless
+				this.logService.debug(`[MCP][tools] '${tool.name}': enabled (reason=${decisionReason})`);
 				return true;
 			}
 
 			// 1. Check for what the consumer wants explicitly
 			const explicit = filter?.(tool);
 			if (explicit !== undefined) {
+				decisionReason = `explicitFilter=${explicit}`;
+				this.logService.debug(`[MCP][tools] '${tool.name}': ${explicit ? 'enabled' : 'disabled'} (reason=${decisionReason})`);
 				return explicit;
 			}
 
@@ -267,6 +335,8 @@ export class McpToolsService extends BaseToolsService {
 			for (const ref of request.toolReferences) {
 				const usedTool = toolMap.get(ref.name);
 				if (usedTool?.tags.includes(`enable_other_tool_${tool.name}`)) {
+					decisionReason = `enabledByReference=${ref.name}`;
+					this.logService.debug(`[MCP][tools] '${tool.name}': enabled (reason=${decisionReason})`);
 					return true;
 				}
 			}
@@ -274,14 +344,20 @@ export class McpToolsService extends BaseToolsService {
 			// 3. If this tool is neither enabled nor disabled, then consumer didn't have opportunity to enable/disable it.
 			// This can happen when a tool is added during another tool call (e.g. installExt tool installs an extension that contributes tools).
 			if (toolPickerSelection === undefined && tool.tags.includes('extension_installed_by_tool')) {
+				decisionReason = 'extensionInstalledByTool';
+				this.logService.debug(`[MCP][tools] '${tool.name}': enabled (reason=${decisionReason})`);
 				return true;
 			}
 
 			// Tool was enabled via tool picker
 			if (toolPickerSelection === true) {
+				decisionReason = 'pickerEnabled';
+				this.logService.debug(`[MCP][tools] '${tool.name}': enabled (reason=${decisionReason})`);
 				return true;
 			}
 
+			decisionReason = 'fallbackTrue'; // fallback path always returns true in current logic
+			this.logService.debug(`[MCP][tools] '${tool.name}': enabled (reason=${decisionReason})`);
 			return true;
 		});
 	}

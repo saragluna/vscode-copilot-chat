@@ -156,6 +156,13 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			}
 		}
 
+		// Force-enable specific tools provided by the 'graphragcode' MCP server
+		const graphragcodeToolNames = new Set([
+			'find_element_location',
+			'query_code',
+			'select_files_related_to'
+		]);
+
 		const tools = this.tools.filter(
 			tool => filter?.(tool) ?? (
 				!this._disabledTools.has(getToolName(tool.name))
