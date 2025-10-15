@@ -19,6 +19,7 @@ import { TestToolsService } from '../../src/extension/tools/node/test/testToolsS
 import { editingSessionAgentEditorName, editorAgentName, getChatParticipantIdFromName } from '../../src/platform/chat/common/chatAgents';
 import { IChatMLFetcher } from '../../src/platform/chat/common/chatMLFetcher';
 import { ILanguageFeaturesService } from '../../src/platform/languages/common/languageFeaturesService';
+import { FinishedCompletionReason } from '../../src/platform/networking/common/openai';
 import { ITabsAndEditorsService } from '../../src/platform/tabs/common/tabsAndEditorsService';
 import { isInExtensionHost } from '../../src/platform/test/node/isInExtensionHost';
 import { IDeserializedWorkspaceState } from '../../src/platform/test/node/promptContextModel';
@@ -45,6 +46,7 @@ import { SpyingChatMLFetcher } from '../base/spyingChatMLFetcher';
 import { ISimulationTestRuntime, NonExtensionConfiguration } from '../base/stest';
 import { createWorkingSetFileVariable, parseQueryForTest } from '../e2e/testHelper';
 import { readBuiltinIntents } from '../intent/intentTest';
+import { decideNextStep } from './appmodAiHelper';
 import { getDiagnostics } from './diagnosticProviders';
 import { convertTestToVSCodeDiagnostics } from './diagnosticProviders/utils';
 import { SimulationLanguageFeaturesService } from './language/simulationLanguageFeatureService';
@@ -209,8 +211,10 @@ export async function simulateEditingScenario(
 	try {
 		const seenFiles: vscode.ChatPromptReference[] = [];
 
-		for (const query of scenario.queries) {
+		for (let queryIndex = 0; queryIndex < scenario.queries.length; queryIndex++) {
+			const query = scenario.queries[queryIndex];
 
+			console.log(`😈=== ${query.query}`);
 			if (query.file) {
 				if (isNotebook(query.file)) {
 					const notebook = workspace.getNotebook(query.file);
@@ -504,6 +508,27 @@ export async function simulateEditingScenario(
 			const result = await requestHandler.getResult();
 			history.push(new ChatRequestTurn(request.prompt, request.command, [...request.references], '', []));
 			history.push(new ChatResponseTurn([new ChatResponseMarkdownPart(markdownChunks.join(''))], result, ''));
+
+			const conversation = requestHandler.conversation;
+			const lastResponseMessage = conversation.getLatestTurn().rounds.at(-1)?.response;
+			console.log(`😈=== query response reason ${conversation.response.reason}, query last response message:
+			${lastResponseMessage}`);
+
+			let nextStep;
+			if (conversation.response.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
+				nextStep = await decideNextStep(lastResponseMessage);
+				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
+			}
+			if ("Continue" === nextStep) {
+				// Insert a new "Continue" query after the current index
+				const nextQuery = process.env.NEXT_STEP_QUERY || "proceed with the migration";
+				const continueQuery: IScenarioQuery = {
+					query: `/editAgent ${nextQuery}`,
+					expectedIntent: undefined,
+					validate: async (outcome, workspace, accessor) => assert.ok(true),
+				};
+				scenario.queries.splice(queryIndex + 1, 0, continueQuery);
+			}
 
 			let annotations = await responseProcessor?.postProcess(accessor, workspace, stream, result) ?? [];
 

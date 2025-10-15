@@ -332,6 +332,8 @@ export class DefaultIntentRequestHandler {
 				loop.telemetry.sendToolCallingTelemetry(result.toolCallRounds, result.availableTools, this.token.isCancellationRequested ? 'cancelled' : result.response.type);
 			}
 			result.chatResult ??= {};
+			this.conversation.response = result.response;
+
 			if ((result.chatResult.metadata as IResultMetadata)?.maxToolCallsExceeded) {
 				loop.telemetry.sendToolCallingTelemetry(result.toolCallRounds, result.availableTools, 'maxToolCalls');
 			}

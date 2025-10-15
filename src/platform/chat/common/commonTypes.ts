@@ -7,7 +7,7 @@ import * as l10n from '@vscode/l10n';
 import type { ChatErrorDetails, ChatResult } from 'vscode';
 import { secondsToHumanReadableTime } from '../../../util/common/time';
 import { ChatErrorLevel } from '../../../vscodeTypes';
-import { APIErrorResponse, APIUsage, FilterReason } from '../../networking/common/openai';
+import { APIErrorResponse, APIUsage, FilterReason, FinishedCompletionReason } from '../../networking/common/openai';
 
 /**
  * The location of a chat request.
@@ -179,7 +179,7 @@ export type ChatFetchRetriableError<T> =
 	{ type: ChatFetchResponseType.FilteredRetry; reason: string; category: FilterReason; value: T; requestId: string; serverRequestId: string | undefined }
 
 export type FetchSuccess<T> =
-	{ type: ChatFetchResponseType.Success; value: T; requestId: string; serverRequestId: string | undefined; usage: APIUsage | undefined };
+	{ type: ChatFetchResponseType.Success; value: T; requestId: string; serverRequestId: string | undefined; usage: APIUsage | undefined; reason: FinishedCompletionReason | undefined };
 
 export type FetchResponse<T> = FetchSuccess<T> | ChatFetchError;
 
