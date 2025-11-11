@@ -17,8 +17,8 @@ import { CustomModel, EndpointEditToolName } from '../../endpoint/common/endpoin
 import { ILogService } from '../../log/common/logService';
 import { ITelemetryService, TelemetryProperties } from '../../telemetry/common/telemetry';
 import { TelemetryData } from '../../telemetry/common/telemetryData';
-import { FinishedCallback, OpenAiFunctionTool, OpenAiResponsesFunctionTool, OptionalChatRequestParams } from './fetch';
-import { FetchOptions, IAbortController, IFetcherService, Response } from './fetcherService';
+import { FinishedCallback, OpenAiFunctionTool, OpenAiResponsesFunctionTool, OptionalChatRequestParams, Prediction } from './fetch';
+import { FetcherId, FetchOptions, IAbortController, IFetcherService, Response } from './fetcherService';
 import { ChatCompletion, RawMessageConversionCallback, rawMessageToCAPI } from './openai';
 
 /**
@@ -67,6 +67,7 @@ export interface IEndpointBody {
 	temperature?: number;
 	top_p?: number;
 	stream?: boolean;
+	prediction?: Prediction;
 	messages?: any[];
 	n?: number;
 	reasoning?: { effort?: string; summary?: string };
@@ -100,11 +101,19 @@ export interface IEndpointBody {
 	truncation?: 'auto' | 'disabled';
 	include?: ['reasoning.encrypted_content'];
 	store?: boolean;
+	text?: {
+		verbosity?: 'low' | 'medium' | 'high';
+	};
+}
+
+export interface IEndpointFetchOptions {
+	suppressIntegrationId?: boolean;
 }
 
 export interface IEndpoint {
 	readonly urlOrRequestMetadata: string | RequestMetadata;
 	getExtraHeaders?(): Record<string, string>;
+	getEndpointFetchOptions?(): IEndpointFetchOptions;
 	interceptBody?(body: IEndpointBody | undefined): void;
 	acquireTokenizer(): ITokenizer;
 	readonly modelMaxPromptTokens: number;
@@ -145,6 +154,10 @@ export interface IMakeChatRequestOptions {
 	telemetryProperties?: TelemetryProperties;
 	/** Enable retrying the request when it was filtered due to snippy. Note- if using finishedCb, requires supporting delta.retryReason, eg with clearToPreviousToolInvocation */
 	enableRetryOnFilter?: boolean;
+	/** Enable retrying the request when it failed. Defaults to enableRetryOnFilter. Note- if using finishedCb, requires supporting delta.retryReason, eg with clearToPreviousToolInvocation */
+	enableRetryOnError?: boolean;
+	/** Which fetcher to use, overrides the default. */
+	useFetcher?: FetcherId;
 }
 
 export interface ICreateEndpointBodyOptions extends IMakeChatRequestOptions {
@@ -263,7 +276,8 @@ function networkRequest(
 	requestId: string,
 	body?: IEndpointBody,
 	additionalHeaders?: Record<string, string>,
-	cancelToken?: CancellationToken
+	cancelToken?: CancellationToken,
+	useFetcher?: FetcherId,
 ): Promise<Response> {
 	// TODO @lramos15 Eventually don't even construct this fake endpoint object.
 	const endpoint = typeof endpointOrUrl === 'string' || 'type' in endpointOrUrl ? {
@@ -291,11 +305,14 @@ function networkRequest(
 		endpoint.interceptBody(body);
 	}
 
+	const endpointFetchOptions = endpoint.getEndpointFetchOptions?.();
 	const request: FetchOptions = {
 		method: requestType,
 		headers: headers,
 		json: body,
 		timeout: requestTimeoutMs,
+		useFetcher,
+		suppressIntegrationId: endpointFetchOptions?.suppressIntegrationId
 	};
 
 	if (cancelToken) {
@@ -353,7 +370,8 @@ export function postRequest(
 	requestId: string,
 	body?: IEndpointBody,
 	additionalHeaders?: Record<string, string>,
-	cancelToken?: CancellationToken
+	cancelToken?: CancellationToken,
+	useFetcher?: FetcherId,
 ): Promise<Response> {
 	return networkRequest(fetcherService,
 		telemetryService,
@@ -365,7 +383,8 @@ export function postRequest(
 		requestId,
 		body,
 		additionalHeaders,
-		cancelToken
+		cancelToken,
+		useFetcher,
 	);
 }
 

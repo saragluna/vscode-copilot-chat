@@ -23,6 +23,7 @@ import { RemoteEmbeddingsComputer } from '../../../platform/embeddings/common/re
 import { ICAPIClientService } from '../../../platform/endpoint/common/capiClient';
 import { IDomainService } from '../../../platform/endpoint/common/domainService';
 import { IEndpointProvider } from '../../../platform/endpoint/common/endpointProvider';
+import { AutomodeService, IAutomodeService } from '../../../platform/endpoint/node/automodeService';
 import { CAPIClientImpl } from '../../../platform/endpoint/node/capiClientImpl';
 import { DomainService } from '../../../platform/endpoint/node/domainServiceImpl';
 import { TestEndpointProvider } from '../../../platform/endpoint/test/node/testEndpointProvider';
@@ -54,6 +55,8 @@ import { AlternativeNotebookContentEditGenerator, IAlternativeNotebookContentEdi
 import { MockAlternativeNotebookContentService } from '../../../platform/notebook/common/mockAlternativeContentService';
 import { INotebookService } from '../../../platform/notebook/common/notebookService';
 import { INotificationService, NullNotificationService } from '../../../platform/notification/common/notificationService';
+import { IPromptsService } from '../../../platform/promptFiles/common/promptsService';
+import { PromptsServiceImpl } from '../../../platform/promptFiles/common/promptsServiceImpl';
 import { IPromptPathRepresentationService, PromptPathRepresentationService } from '../../../platform/prompts/common/promptPathRepresentationService';
 import { IRemoteRepositoriesService, RemoteRepositoriesService } from '../../../platform/remoteRepositories/vscode/remoteRepositories';
 import { NullRequestLogger } from '../../../platform/requestLogger/node/nullRequestLogger';
@@ -80,6 +83,7 @@ import { TestProvider } from '../../../platform/testing/vscode/testProviderImpl'
 import { ITokenizerProvider, TokenizerProvider } from '../../../platform/tokenizer/node/tokenizer';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { ExtensionTextDocumentManager } from '../../../platform/workspace/vscode/workspaceServiceImpl';
+import { GithubAvailableEmbeddingTypesService, IGithubAvailableEmbeddingTypesService } from '../../../platform/workspaceChunkSearch/common/githubAvailableEmbeddingTypes';
 import { SyncDescriptor } from '../../../util/vs/platform/instantiation/common/descriptors';
 import { CommandServiceImpl, ICommandService } from '../../commands/node/commandService';
 import { IPromptWorkspaceLabels, PromptWorkspaceLabels } from '../../context/node/resolvers/promptWorkspaceLabels';
@@ -113,6 +117,7 @@ import { IToolGroupingCache, IToolGroupingService } from '../../tools/common/vir
  */
 export function createExtensionTestingServices(): TestingServiceCollection {
 	const testingServiceCollection = _createBaselineServices();
+	testingServiceCollection.define(IAutomodeService, new SyncDescriptor(AutomodeService));
 	testingServiceCollection.define(IFileSystemService, new SyncDescriptor(NodeFileSystemService));
 	testingServiceCollection.define(IConfigurationService, new SyncDescriptor(DefaultsOnlyConfigurationService));
 	testingServiceCollection.define(IEnvService, new SyncDescriptor(TestEnvService));
@@ -172,6 +177,7 @@ export function createExtensionTestingServices(): TestingServiceCollection {
 	testingServiceCollection.define(ILanguageFeaturesService, new SyncDescriptor(NoopLanguageFeaturesService));
 	testingServiceCollection.define(IScopeSelector, new SyncDescriptor(ScopeSelectorImpl));
 	testingServiceCollection.define(IPromptPathRepresentationService, new SyncDescriptor(PromptPathRepresentationService));
+	testingServiceCollection.define(IPromptsService, new SyncDescriptor(PromptsServiceImpl));
 	testingServiceCollection.define(IToolsService, new SyncDescriptor(NullToolsService));
 	testingServiceCollection.define(IChatSessionService, new SyncDescriptor(TestChatSessionService));
 	testingServiceCollection.define(INotebookService, new SyncDescriptor(SimulationNotebookService));
@@ -180,6 +186,7 @@ export function createExtensionTestingServices(): TestingServiceCollection {
 	testingServiceCollection.define(IToolGroupingCache, new SyncDescriptor(ToolGroupingCache));
 	testingServiceCollection.define(IToolGroupingService, new SyncDescriptor(ToolGroupingService));
 	testingServiceCollection.define(ITodoListContextProvider, new SyncDescriptor(TodoListContextProvider));
+	testingServiceCollection.define(IGithubAvailableEmbeddingTypesService, new SyncDescriptor(GithubAvailableEmbeddingTypesService));
 
 	return testingServiceCollection;
 }

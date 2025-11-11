@@ -172,7 +172,7 @@ class ChatAgents implements IDisposable {
 	}
 
 	private registerEditingAgentEditor(): IDisposable {
-		const editingAgent = this.createAgent(editingSessionAgentEditorName, Intent.Edit);
+		const editingAgent = this.createAgent(editingSessionAgentEditorName, Intent.InlineChat);
 		editingAgent.iconPath = new vscode.ThemeIcon('copilot');
 		editingAgent.additionalWelcomeMessage = this.additionalWelcomeMessage;
 		return editingAgent;

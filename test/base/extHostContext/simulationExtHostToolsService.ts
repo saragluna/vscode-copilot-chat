@@ -16,6 +16,7 @@ import { ToolsContribution } from '../../../src/extension/tools/vscode-node/tool
 import { ToolsService } from '../../../src/extension/tools/vscode-node/toolsService';
 import { packageJson } from '../../../src/platform/env/common/packagejson';
 import { ILogService } from '../../../src/platform/log/common/logService';
+import { IChatEndpoint } from '../../../src/platform/networking/common/networking';
 import { raceTimeout } from '../../../src/util/vs/base/common/async';
 import { CancellationError } from '../../../src/util/vs/base/common/errors';
 import { Iterable } from '../../../src/util/vs/base/common/iterator';
@@ -71,7 +72,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 	}
 
 	private ensureToolsRegistered() {
-		this._lmToolRegistration ??= new ToolsContribution(this, {} as any, { threshold: observableValue(this, 128) } as any);
+		this._lmToolRegistration ??= new ToolsContribution(this, {} as any, { threshold: observableValue(this, 128) } as any, {} as any);
 	}
 
 	getCopilotTool(name: string): ICopilotTool<any> | undefined {
@@ -138,7 +139,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		return undefined;
 	}
 
-	getEnabledTools(request: ChatRequest, filter?: (tool: LanguageModelToolInformation) => boolean | undefined): LanguageModelToolInformation[] {
+	getEnabledTools(request: ChatRequest, endpoint: IChatEndpoint, filter?: (tool: LanguageModelToolInformation) => boolean | undefined): LanguageModelToolInformation[] {
 		const packageJsonTools = getPackagejsonToolsForTest();
 
 		const allowedToolsSet = new Set<string>();
@@ -156,16 +157,27 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			}
 		}
 
-		const tools = this.tools.filter(
-			tool => filter?.(tool) ?? (
+		const tools = this.tools
+			.map(tool => {
+				// Apply model-specific alternative if available via alternativeDefinition
+				const owned = this.copilotTools.get(getToolName(tool.name) as ToolName);
+				if (owned?.alternativeDefinition) {
+					const alternative = owned.alternativeDefinition(tool, endpoint);
+					if (alternative) {
+						return alternative;
+					}
+				}
+				return tool;
+			})
+			.filter(tool =>  filter?.(tool) ?? (
 				!this._disabledTools.has(getToolName(tool.name))
 				&& (
 					(process.env.JAVA_UPGRADE_TOOLS && tool.name.startsWith("appmod"))
 					|| (packageJsonTools.has(tool.name) && tool.name !== 'semantic_search')
 					|| allowedToolsSet.has(tool.name)
 				)
-			)
-		);
+			))
+		;
 
 		this._mcpToolService.getEnabledTools(request, filter);
 
