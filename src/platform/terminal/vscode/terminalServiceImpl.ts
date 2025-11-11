@@ -26,7 +26,8 @@ export class TerminalServiceImpl extends Disposable implements ITerminalService 
 		// It was only ever shipped in the VSCode insiders and never got into stable.
 		// So this is only required for users who had insiders installed before it was removed.
 		// Safe to remove this after a few months or so (https://github.com/microsoft/vscode/issues/275692).
-		this.context.environmentVariableCollection.delete('GH_TOKEN');
+
+		// this.context.environmentVariableCollection.delete('GH_TOKEN');
 
 		for (const l of installTerminalBufferListeners()) {
 			this._register(l);
