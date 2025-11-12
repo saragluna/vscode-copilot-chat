@@ -96,7 +96,7 @@ export class DefaultAgentPrompt extends PromptElement<DefaultAgentPromptProps> {
 				{!this.props.codesearchMode && <>Think creatively and explore the workspace in order to make a complete fix.<br /></>}
 				Don't repeat yourself after a tool call, pick up where you left off.<br />
 				{!this.props.codesearchMode && tools.hasSomeEditTool && <>NEVER print out a codeblock with file changes unless the user asked for it. Use the appropriate edit tool instead.<br /></>}
-				{tools[ToolName.CoreRunInTerminal] && <>NEVER print out a codeblock with a terminal command to run unless the user asked for it. Use the {ToolName.CoreRunInTerminal} tool instead.<br /></>}
+				{tools[ToolName.CoreRunInTerminal] && <>NEVER print out a codeblock with a terminal command to run unless the user asked for it. Use the {ToolName.CoreRunInTerminal} tool instead. NEVER change working directory. Always print current working directory before running any command.<br /></>}
 				You don't need to read a file if it's already provided in context.
 			</Tag>
 			<Tag name='toolUseInstructions'>
@@ -496,6 +496,7 @@ export class GPT5PromptV2 extends PromptElement<DefaultAgentPromptProps> {
 					- Don't call the {ToolName.CoreRunInTerminal} tool multiple times in parallel. Instead, run one command and wait for the output before running the next command.<br />
 					- NEVER try to edit a file by running terminal commands unless the user specifically asks for it.<br />
 					- NEVER print out a codeblock with a terminal command to run unless the user asked for it. Use the {ToolName.CoreRunInTerminal} tool instead<br />
+					- NEVER change working directory. Always print current working directory before running any command.<br />
 				</Tag>}
 				{!tools[ToolName.CoreRunInTerminal] && <Tag name='no_terminal_tools_guidelines'>
 					- You don't currently have any tools available for running terminal commands. If the user asks you to run a terminal command, request enabling terminal tools or print a codeblock with the suggested command.<br />
