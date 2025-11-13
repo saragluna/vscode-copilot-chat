@@ -20,7 +20,7 @@ import * as path from '../../../util/vs/base/common/path';
 import { isString } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
 import { SyncDescriptor } from '../../../util/vs/platform/instantiation/common/descriptors';
-import { Uri } from '../../../vscodeTypes';
+import { Range, Selection, Uri } from '../../../vscodeTypes';
 import { IDebugOutputService } from '../../debug/common/debugOutputService';
 import { IDialogService } from '../../dialog/common/dialogService';
 import { IDiffService } from '../../diff/common/diffService';
