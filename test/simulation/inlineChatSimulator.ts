@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
+import * as fs from 'fs';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { Intent } from '../../src/extension/common/constants';
@@ -39,6 +40,7 @@ import { commonPrefixLength, commonSuffixLength } from '../../src/util/vs/base/c
 import { URI } from '../../src/util/vs/base/common/uri';
 import { SyncDescriptor } from '../../src/util/vs/platform/instantiation/common/descriptors';
 import { IInstantiationService } from '../../src/util/vs/platform/instantiation/common/instantiation';
+import { PromptFileParser } from '../../src/util/vs/workbench/contrib/chat/common/promptSyntax/promptFileParser';
 import { ChatLocation, ChatReferenceDiagnostic, ChatRequest, ChatRequestEditorData, ChatResponseMarkdownPart, ChatResponseNotebookEditPart, ChatResponseTextEditPart, Diagnostic, DiagnosticRelatedInformation, LanguageModelToolResult, Location, NotebookRange, Range, Selection, TextEdit, Uri, WorkspaceEdit } from '../../src/vscodeTypes';
 import { SimulationExtHostToolsService } from '../base/extHostContext/simulationExtHostToolsService';
 import { SimulationWorkspaceExtHost } from '../base/extHostContext/simulationWorkspaceExtHost';
@@ -52,7 +54,6 @@ import { convertTestToVSCodeDiagnostics } from './diagnosticProviders/utils';
 import { SimulationLanguageFeaturesService } from './language/simulationLanguageFeatureService';
 import { IDiagnostic, IDiagnosticComparison, INLINE_CHANGED_DOC_TAG, INLINE_INITIAL_DOC_TAG, INLINE_STATE_TAG, IRange, IWorkspaceState, IWorkspaceStateFile } from './shared/sharedTypes';
 import { DiagnosticProviderId, EditTestStrategy, IDeserializedWorkspaceStateBasedScenario, IInlineEdit, IOutcome, IScenario, IScenarioDiagnostic, IScenarioQuery, OutcomeAnnotation } from './types';
-import { readFileIfExists } from '../base/fileUtils';
 
 export type SimulationWorkspaceInput = { files: IFile[]; workspaceFolders?: Uri[] } | { workspaceState: IDeserializedWorkspaceState };
 
@@ -372,6 +373,31 @@ export async function simulateEditingScenario(
 			references.push(...(host.contributeAdditionalReferences?.(accessor, references) ?? []));
 
 			const { location, location2 } = host.prepareChatRequestLocation(accessor, range);
+
+			let modeInstructions2: vscode.ChatRequestModeInstructions | undefined = undefined;
+			if (process.env.SIMULATION_CUSTOM_AGENT_FILE) {
+				console.log(`Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}`);
+				const agentFilePath = process.env.SIMULATION_CUSTOM_AGENT_FILE;
+				if (fs.existsSync(agentFilePath)) {
+					const agentFileContent = fs.readFileSync(agentFilePath, 'utf-8');
+					const agentFileUri = URI.file(agentFilePath);
+					const parser = new PromptFileParser();
+					const parsedFile = parser.parse(agentFileUri, agentFileContent);
+
+					if (parsedFile.header && parsedFile.body) {
+						modeInstructions2 = {
+							name: 'customAgentFromFile',
+							content: parsedFile.body.getContent(),
+							toolReferences: parsedFile.header.tools?.map(toolName => ({
+								name: toolName
+							})) as readonly vscode.ChatLanguageModelToolReference[] | undefined,
+							metadata: {}
+						};
+						console.log(`Initialized modeInstructions2 as ${JSON.stringify(modeInstructions2, null, 2)}`);
+					}
+				}
+			}
+
 			let request: vscode.ChatRequest = {
 				location,
 				location2,
@@ -386,12 +412,9 @@ export async function simulateEditingScenario(
 				model: null!, // https://github.com/microsoft/vscode-copilot/issues/9475
 				tools: new Map(),
 				id: '1',
-				sessionId: '1'
+				sessionId: '1',
+				modeInstructions2: modeInstructions2
 			};
-
-			if (process.env.SIMULATION_MODE_INSTRUCTIONS) {
-				request.modeInstructions = await readFileIfExists(process.env.SIMULATION_MODE_INSTRUCTIONS);
-			}
 
 			// Run intent detection
 			if (!request.command) {
@@ -505,11 +528,11 @@ export async function simulateEditingScenario(
 
 			const conversation = requestHandler.conversation;
 			const lastResponseMessage = conversation.getLatestTurn().rounds.at(-1)?.response;
-			console.log(`😈=== query response reason ${conversation.response.reason}, query last response message:
+			console.log(`😈=== query response reason ${conversation.response?.reason}, query last response message:
 			${lastResponseMessage}`);
 
 			let nextStep;
-			if (conversation.response.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
+			if (conversation.response?.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
 				nextStep = await decideNextStep(lastResponseMessage);
 				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
 			}

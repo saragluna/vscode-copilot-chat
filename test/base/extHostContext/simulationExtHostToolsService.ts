@@ -23,6 +23,8 @@ import { Iterable } from '../../../src/util/vs/base/common/iterator';
 import { observableValue } from '../../../src/util/vs/base/common/observableInternal';
 import { IInstantiationService } from '../../../src/util/vs/platform/instantiation/common/instantiation';
 import { logger } from '../../simulationLogger';
+import { URI } from '../../../src/util/vs/base/common/uri';
+import { PromptFileParser } from '../../../src/util/vs/workbench/contrib/chat/common/promptSyntax/promptFileParser';
 
 export class SimulationExtHostToolsService extends BaseToolsService implements IToolsService {
 	declare readonly _serviceBrand: undefined;
@@ -225,9 +227,30 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		for (const t of mcpTools) {
 			allToolsMap.set(t.name, t);
 		}
-		const allTools = Array.from(allToolsMap.values());
+		let allTools = Array.from(allToolsMap.values());
+
+		let isCustomAgent = false;
+		if (process.env.SIMULATION_CUSTOM_AGENT_FILE) {
+			const agentFilePath = process.env.SIMULATION_CUSTOM_AGENT_FILE;
+			if (fs.existsSync(agentFilePath)) {
+				const agentFileContent = fs.readFileSync(agentFilePath, 'utf-8');
+				const agentFileUri = URI.file(agentFilePath);
+				const parser = new PromptFileParser();
+				const parsedFile = parser.parse(agentFileUri, agentFileContent);
+
+				const customAgentTollSets = new Set<string>();
+				parsedFile.header?.tools?.map(toolName => customAgentTollSets.add(toolName));
+				let filteredTools = allTools.filter(tool => customAgentTollSets.has(tool.name));
+				allTools = filteredTools;
+				isCustomAgent = true;
+			}
+		}
+
 		const toolNames = allTools.map(t => t.name).join(",");
 		if (process.env.MCP_SERVERS_INITIALIZED === 'true' && this.counter++ === 0) {
+			if (isCustomAgent) {
+				logger.debug(`Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}, to filter available tools`);
+			}
 			logger.debug('SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
 			logger.debug(`SimulationExtHostToolsService.invokeToolTimeout set to ${process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000}`);
 		}
