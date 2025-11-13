@@ -47,11 +47,11 @@ export class NullEnvService extends AbstractEnvService {
 	}
 
 	override get shell(): string {
-		return 'zsh';
+		return 'Windows PowerShell';
 	}
 
 	override get OS(): OperatingSystem {
-		return OperatingSystem.Linux;
+		return OperatingSystem.Windows;
 	}
 
 	override getEditorInfo(): NameAndVersion {

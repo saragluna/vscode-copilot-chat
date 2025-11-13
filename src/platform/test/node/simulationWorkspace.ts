@@ -20,7 +20,7 @@ import * as path from '../../../util/vs/base/common/path';
 import { isString } from '../../../util/vs/base/common/types';
 import { URI } from '../../../util/vs/base/common/uri';
 import { SyncDescriptor } from '../../../util/vs/platform/instantiation/common/descriptors';
-import { Range, Selection, Uri } from '../../../vscodeTypes';
+import { Uri } from '../../../vscodeTypes';
 import { IDebugOutputService } from '../../debug/common/debugOutputService';
 import { IDialogService } from '../../dialog/common/dialogService';
 import { IDiffService } from '../../diff/common/diffService';
@@ -151,7 +151,13 @@ export class SimulationWorkspace {
 	}
 
 	public get workspaceFolders() {
-		return this._workspaceFolders ?? [filePathToUri('/', this._workspaceFolders)];
+		const folders = this._workspaceFolders ?? [filePathToUri('/', this._workspaceFolders)];
+		// FIXME: on Windows, need to strip leading slash. This is a hacky way to do it.
+		return folders.map(f => {
+			return f.scheme === Schemas.file && /^\/[A-Za-z]:/.test(f.path)
+				? f.with({ path: f.path.substring(1) })
+				: f;
+		});
 	}
 
 	public get activeFileDiagnostics(): vscode.Diagnostic[] {
