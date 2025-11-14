@@ -386,14 +386,14 @@ export async function simulateEditingScenario(
 
 					if (parsedFile.header && parsedFile.body) {
 						modeInstructions2 = {
-							name: 'customAgentFromFile',
+							name: parsedFile.header.name ?? "CustomAgentFromFile",
 							content: parsedFile.body.getContent(),
 							toolReferences: parsedFile.header.tools?.map(toolName => ({
 								name: toolName
 							})) as readonly vscode.ChatLanguageModelToolReference[] | undefined,
 							metadata: {}
 						};
-						console.log(`Initialized modeInstructions2 as ${JSON.stringify(modeInstructions2, null, 2)}`);
+						console.log(`😈=== Initialized modeInstructions2 as ${JSON.stringify(modeInstructions2)}`);
 					}
 				}
 			}
@@ -412,7 +412,7 @@ export async function simulateEditingScenario(
 				model: null!, // https://github.com/microsoft/vscode-copilot/issues/9475
 				tools: new Map(),
 				id: '1',
-				sessionId: '1',
+				sessionId: query.sessionId ?? '1',
 				modeInstructions2: modeInstructions2
 			};
 
@@ -543,6 +543,7 @@ export async function simulateEditingScenario(
 					query: `/editAgent ${nextQuery}`,
 					expectedIntent: undefined,
 					validate: async (outcome, workspace, accessor) => assert.ok(true),
+					sessionId: conversation.sessionId
 				};
 				scenario.queries.splice(queryIndex + 1, 0, continueQuery);
 			}

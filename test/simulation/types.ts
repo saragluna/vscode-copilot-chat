@@ -81,6 +81,7 @@ export interface IScenarioQuery {
 	diagnostics?: IScenarioDiagnostic[] | DiagnosticProviderId;
 	fileIndentInfo?: FormattingOptions;
 	promptReferences?: IScenarioPromptReference[];
+	sessionId?: string;
 }
 
 export interface IScenarioDiagnostic {

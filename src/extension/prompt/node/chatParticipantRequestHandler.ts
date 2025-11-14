@@ -109,7 +109,11 @@ export class ChatParticipantRequestHandler {
 
 		const { turns, sessionId } = _instantiationService.invokeFunction(accessor => addHistoryToConversation(accessor, rawHistory));
 		normalizeSummariesOnRounds(turns);
-		const actualSessionId = sessionId ?? generateUuid();
+
+		const actualSessionId = sessionId ?? ((request.sessionId && request.sessionId !== '1') ? request.sessionId : generateUuid());
+		console.log(`😈=== Session Id from history is ${sessionId}`);
+		console.log(`😈=== Request session id is ${request.sessionId}`)
+		console.log(`😈=== Actual session id is ${actualSessionId}`)
 
 		this.documentContext = IDocumentContext.inferDocumentContext(request, tabsAndEditorsService.activeTextEditor, turns);
 
