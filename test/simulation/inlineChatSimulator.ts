@@ -215,6 +215,7 @@ export async function simulateEditingScenario(
 	 * A map from doc to relative path with initial contents which is populated right before modifying a document.
 	 */
 	const changedDocsInitialStates = new Map<vscode.TextDocument, Promise<IWorkspaceStateFile> | null>();
+	let continueTimes = 5;
 
 	// run each query for the scenario
 	try {
@@ -536,14 +537,14 @@ export async function simulateEditingScenario(
 				nextStep = await decideNextStep(lastResponseMessage);
 				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
 			}
-			if ("Continue" === nextStep) {
+			if ("Continue" === nextStep && continueTimes-- > 0) {
 				// Insert a new "Continue" query after the current index
 				const nextQuery = process.env.NEXT_STEP_QUERY || "proceed with the migration";
 				const continueQuery: IScenarioQuery = {
 					query: `/editAgent ${nextQuery}`,
 					expectedIntent: undefined,
 					validate: async (outcome, workspace, accessor) => assert.ok(true),
-					sessionId: conversation.sessionId
+					// sessionId: conversation.sessionId
 				};
 				scenario.queries.splice(queryIndex + 1, 0, continueQuery);
 			}
