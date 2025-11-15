@@ -157,7 +157,7 @@ export abstract class AbstractReplaceStringTool<T extends { explanation: string 
 		const fileResults: IEditedFile[] = [];
 		const existingDiagnosticMap = new ResourceMap<vscode.Diagnostic[]>();
 
-		for (const { document, uri, generatedEdit } of edits) {
+		for (const { document, uri, generatedEdit, input } of edits) {
 			if (!existingDiagnosticMap.has(document.uri)) {
 				existingDiagnosticMap.set(document.uri, this.languageDiagnosticsService.getDiagnostics(document.uri));
 			}
@@ -226,6 +226,27 @@ export abstract class AbstractReplaceStringTool<T extends { explanation: string 
 				});
 
 				fileResults.push({ operation: ActionType.UPDATE, uri, isNotebook, existingDiagnostics });
+
+				// After edits are applied to a text document, force a save and log dirtiness/mtime delta.
+				if (document instanceof TextDocumentSnapshot) {
+					void (async () => {
+						try {
+							const beforeStat = await this.fileSystemService.stat(uri);
+							const liveDoc = document.document;
+							const isDirtyBeforeSave = liveDoc.isDirty;
+							this._promptContext.stream.markdown(`\n[replace_string_in_file before save] file=${uri.fsPath} dirtyBeforeSave=${isDirtyBeforeSave}\n`);
+							const saved = await liveDoc.save();
+							const afterStat = await this.fileSystemService.stat(uri);
+							const mtimeDelta = Number(afterStat.mtime) - Number(beforeStat.mtime);
+							const isDirtyAfterSave = liveDoc.isDirty;
+							const oldSnippet = input?.oldString;
+							const stillContainsOld = oldSnippet ? liveDoc.getText().includes(oldSnippet) : false;
+							this._promptContext.stream.markdown(`\n[replace_string_in_file after save] file=${uri.fsPath} saved=${saved} dirtyAfterSave=${isDirtyAfterSave} mtimeDelta=${mtimeDelta}ms stillContainsOldSnippet=${stillContainsOld}\n`);
+						} catch (e) {
+							this._promptContext.stream.markdown(`\n[replace_string_in_file save] error ${(e as Error).message}\n`);
+						}
+					})();
+				}
 			}
 
 			this._promptContext.stream.markdown('\n```\n');
