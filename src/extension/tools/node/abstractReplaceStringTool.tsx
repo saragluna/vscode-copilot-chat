@@ -229,27 +229,32 @@ export abstract class AbstractReplaceStringTool<T extends { explanation: string 
 
 				// After edits are applied to a text document, force a save and log dirtiness/mtime delta.
 				if (document instanceof TextDocumentSnapshot) {
+					// Capture dirty state before save and store in result immediately
+					fileResults.pop(); // remove previously added entry without preSaveDirty
+					const liveDoc = document.document;
+					const isDirtyBeforeSave = liveDoc.isDirty;
+					fileResults.push({ operation: ActionType.UPDATE, uri, isNotebook, existingDiagnostics, preSaveDirty: isDirtyBeforeSave });
 					void (async () => {
+						const promptStream = this._promptContext?.stream;
+						if (!promptStream) { return; }
 						try {
 							const beforeStat = await this.fileSystemService.stat(uri);
-							const liveDoc = document.document;
-							const isDirtyBeforeSave = liveDoc.isDirty;
-							this._promptContext.stream.markdown(`\n[replace_string_in_file before save] file=${uri.fsPath} dirtyBeforeSave=${isDirtyBeforeSave}\n`);
+							promptStream.markdown(`\n[replace_string_in_file before save] file=${uri.fsPath} dirtyBeforeSave=${isDirtyBeforeSave}\n`);
 							const saved = await liveDoc.save();
 							const afterStat = await this.fileSystemService.stat(uri);
 							const mtimeDelta = Number(afterStat.mtime) - Number(beforeStat.mtime);
 							const isDirtyAfterSave = liveDoc.isDirty;
 							const oldSnippet = input?.oldString;
 							const stillContainsOld = oldSnippet ? liveDoc.getText().includes(oldSnippet) : false;
-							this._promptContext.stream.markdown(`\n[replace_string_in_file after save] file=${uri.fsPath} saved=${saved} dirtyAfterSave=${isDirtyAfterSave} mtimeDelta=${mtimeDelta}ms stillContainsOldSnippet=${stillContainsOld}\n`);
+							promptStream.markdown(`\n[replace_string_in_file after save] file=${uri.fsPath} saved=${saved} dirtyAfterSave=${isDirtyAfterSave} mtimeDelta=${mtimeDelta}ms stillContainsOldSnippet=${stillContainsOld}\n`);
 						} catch (e) {
-							this._promptContext.stream.markdown(`\n[replace_string_in_file save] error ${(e as Error).message}\n`);
+							promptStream.markdown(`\n[replace_string_in_file save] error ${(e as Error).message}\n`);
 						}
 					})();
 				}
 			}
 
-			this._promptContext.stream.markdown('\n```\n');
+			(this._promptContext.stream as any).markdown('\n```\n');
 		}
 
 		return new LanguageModelToolResult([
@@ -258,11 +263,9 @@ export abstract class AbstractReplaceStringTool<T extends { explanation: string 
 					this.instantiationService,
 					EditFileResult,
 					{ files: fileResults, diagnosticsTimeout: 2000, toolName: this.toolName(), requestId: options.chatRequestId, model: options.model },
-					// If we are not called with tokenization options, have _some_ fake tokenizer
-					// otherwise we end up returning the entire document
-					options.tokenizationOptions ?? {
+					{ // fallback tokenizer
 						tokenBudget: 5000,
-						countTokens: (t) => Promise.resolve(t.length * 3 / 4)
+						countTokens: (t: string) => Promise.resolve(t.length * 3 / 4)
 					},
 					token,
 				),

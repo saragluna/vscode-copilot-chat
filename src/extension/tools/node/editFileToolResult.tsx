@@ -26,6 +26,8 @@ export interface IEditedFile {
 	uri: URI;
 	isNotebook: boolean;
 	error?: string;
+	/** Whether the document was dirty (had unsaved changes) immediately before the replace/save sequence */
+	preSaveDirty?: boolean;
 }
 
 export interface IEditFileResultProps extends BasePromptElementProps {
@@ -89,7 +91,8 @@ export class EditFileResult extends PromptElement<IEditFileResultProps> {
 				continue;
 			}
 
-			successfullyEditedFiles.push(this.promptPathRepresentationService.getFilePath(file.uri));
+			const annotatedPath = this.promptPathRepresentationService.getFilePath(file.uri) + (typeof file.preSaveDirty === 'boolean' ? ` (dirtyBeforeSave=${file.preSaveDirty})` : ' (unknown dirty state)');
+			successfullyEditedFiles.push(annotatedPath);
 		}
 
 		if (this.props.toolName && this.props.requestId) {
