@@ -100,7 +100,7 @@ export class PromptPathRepresentationService implements IPromptPathRepresentatio
 export class TestPromptPathRepresentationService extends PromptPathRepresentationService {
 	override getFilePath(uri: Uri): string {
 		if (uri.scheme === Schemas.file || uri.scheme === Schemas.vscodeRemote) {
-			return uri.path;
+			return uri.fsPath;
 		}
 		return uri.toString();
 	}
