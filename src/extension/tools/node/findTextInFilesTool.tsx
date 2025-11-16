@@ -55,9 +55,10 @@ export class FindTextInFilesTool implements ICopilotTool<IFindTextInFilesToolPar
 			results = await this.searchAndCollectResults(options.input.query, !isRegExp, patterns, maxResults, token);
 		}
 
+		const implementingClassName = (this.searchService as any)?.constructor?.name;
 		const result = new ExtendedLanguageModelToolResult([
 			new LanguageModelPromptTsxPart(
-				await renderPromptElementJSON(this.instantiationService, FindTextInFilesResult, { textResults: results, maxResults, askedForTooManyResults: Boolean(askedForTooManyResults) }, options.tokenizationOptions, token))]);
+				await renderPromptElementJSON(this.instantiationService, FindTextInFilesResult, { textResults: results, maxResults, askedForTooManyResults: Boolean(askedForTooManyResults), implementingClassName }, options.tokenizationOptions, token))]);
 		const textMatches = results.flatMap(r => {
 			if ('ranges' in r) {
 				return asArray(r.ranges).map(rangeInfo => new Location(r.uri, rangeInfo.sourceRange));
@@ -66,11 +67,12 @@ export class FindTextInFilesTool implements ICopilotTool<IFindTextInFilesToolPar
 			return [];
 		}).slice(0, maxResults);
 		const query = this.formatQueryString(options.input);
-		result.toolResultMessage = textMatches.length === 0 ?
-			new MarkdownString(l10n.t`Searched text for ${query}, no results`) :
+		const baseMessage = textMatches.length === 0 ?
+			l10n.t`Searched text for ${query}, no results` :
 			textMatches.length === 1 ?
-				new MarkdownString(l10n.t`Searched text for ${query}, 1 result`) :
-				new MarkdownString(l10n.t`Searched text for ${query}, ${textMatches.length} results`);
+				l10n.t`Searched text for ${query}, 1 result` :
+				l10n.t`Searched text for ${query}, ${textMatches.length} results`;
+		result.toolResultMessage = new MarkdownString(implementingClassName ? `${baseMessage} (provider: ${implementingClassName})` : baseMessage);
 
 		result.toolResultDetails = textMatches;
 		return result;
@@ -150,6 +152,7 @@ export interface FindTextInFilesResultProps extends BasePromptElementProps {
 	textResults: vscode.TextSearchResult2[];
 	maxResults: number;
 	askedForTooManyResults?: boolean;
+	implementingClassName?: string; // Concrete ISearchService implementation name
 }
 
 /** Max number of characters between matching ranges. */
@@ -172,6 +175,7 @@ export class FindTextInFilesResult extends PromptElement<FindTextInFilesResultPr
 		const maxResultsText = numResults > this.props.maxResults ? ` (more results are available)` : '';
 		return <>
 			{<TextChunk priority={20}>{numResultsText}{maxResultsText}{maxResultsTooLargeText}</TextChunk>}
+			{this.props.implementingClassName && <TextChunk priority={19}>Provider: {this.props.implementingClassName}</TextChunk>}
 			{textMatches.flatMap(result => {
 				// The result preview line always ends in a newline, I think that makes sense but don't display an extra empty line
 				const previewText = result.previewText.replace(/\n$/, '');
