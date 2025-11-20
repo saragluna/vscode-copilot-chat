@@ -338,8 +338,8 @@ export function addHistoryToConversation(accessor: ServicesAccessor, history: Re
 	for (const entry of history) {
 		// The extension API model technically supports arbitrary requests/responses not in pairs, but this isn't used anywhere,
 		// so we can just fit this to our Conversation model for now.
-		if (entry instanceof ChatRequestTurn) {
-			previousChatRequestTurn = entry;
+		if (entry instanceof ChatRequestTurn || entry.constructor.name.includes("ChatRequestTurn")) {
+			previousChatRequestTurn = entry as ChatRequestTurn;
 		} else {
 			const existingTurn = instaService.invokeFunction(findExistingTurnFromVSCodeChatHistoryTurn, entry);
 			if (existingTurn) {
@@ -349,6 +349,8 @@ export function addHistoryToConversation(accessor: ServicesAccessor, history: Re
 					const deserializedTurn = instaService.invokeFunction(createTurnFromVSCodeChatHistoryTurns, previousChatRequestTurn, entry);
 					previousChatRequestTurn = undefined;
 					turns.push(deserializedTurn);
+				} else {
+					console.log("😈=== No turns found")
 				}
 			}
 
@@ -373,8 +375,8 @@ function findExistingTurnFromVSCodeChatHistoryTurn(accessor: ServicesAccessor, t
 }
 
 function getResponseIdFromVSCodeChatHistoryTurn(turn: ChatRequestTurn | ChatResponseTurn): string | undefined {
-	if (turn instanceof ChatResponseTurn) {
-		const lastEntryResult = turn.result as ICopilotChatResultIn | undefined;
+	if (turn instanceof ChatResponseTurn || turn.constructor.name.includes("ChatResponseTurn")) {
+		const lastEntryResult = (turn as ChatResponseTurn).result as ICopilotChatResultIn | undefined;
 		return lastEntryResult?.metadata?.responseId;
 	}
 	return undefined;

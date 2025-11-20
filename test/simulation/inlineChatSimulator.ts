@@ -215,7 +215,7 @@ export async function simulateEditingScenario(
 	 * A map from doc to relative path with initial contents which is populated right before modifying a document.
 	 */
 	const changedDocsInitialStates = new Map<vscode.TextDocument, Promise<IWorkspaceStateFile> | null>();
-	let continueTimes = 5;
+	let continueTimes = 8;
 
 	// run each query for the scenario
 	try {
@@ -414,7 +414,7 @@ export async function simulateEditingScenario(
 				tools: new Map(),
 				id: '1',
 				sessionId: query.sessionId ?? '1',
-				modeInstructions2: modeInstructions2
+				modeInstructions2: modeInstructions2,
 			};
 
 			// Run intent detection
@@ -537,16 +537,22 @@ export async function simulateEditingScenario(
 				nextStep = await decideNextStep(lastResponseMessage);
 				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
 			}
-			if ("Continue" === nextStep && continueTimes-- > 0) {
-				// Insert a new "Continue" query after the current index
-				const nextQuery = process.env.NEXT_STEP_QUERY || "proceed with the migration";
-				const continueQuery: IScenarioQuery = {
-					query: `/editAgent ${nextQuery}`,
-					expectedIntent: undefined,
-					validate: async (outcome, workspace, accessor) => assert.ok(true),
-					// sessionId: conversation.sessionId
-				};
-				scenario.queries.splice(queryIndex + 1, 0, continueQuery);
+
+			if ("Continue" === nextStep) {
+				if (continueTimes-- > 0) {
+					// Insert a new "Continue" query after the current index
+					const nextQuery = process.env.NEXT_STEP_QUERY || "proceed with the migration";
+					const continueQuery: IScenarioQuery = {
+						query: `/editAgent ${nextQuery}`,
+						expectedIntent: undefined,
+						validate: async (outcome, workspace, accessor) => assert.ok(true),
+						// sessionId: conversation.sessionId
+					};
+					scenario.queries.splice(queryIndex + 1, 0, continueQuery);
+					console.log(`😈=== Added one more query to the list`);
+				} else {
+					console.log(`😈=== Reached continue upper limits, will skip`);
+				}
 			}
 
 			let annotations = await responseProcessor?.postProcess(accessor, workspace, stream, result) ?? [];

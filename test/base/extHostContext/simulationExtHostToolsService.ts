@@ -34,6 +34,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 	private readonly _overrides = new Map<ToolName | string, { info: LanguageModelToolInformation; tool: ICopilotTool<any> }>();
 	private _lmToolRegistration?: ToolsContribution;
 	private counter: number;
+	private readonly _customAgentToolSet: Set<String> = new Set<String>();
 
 	override get onWillInvokeTool() {
 		return this._inner.onWillInvokeTool;
@@ -71,6 +72,18 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		// register the contribution so that our tools are on vscode.lm.tools
 		setImmediate(() => this.ensureToolsRegistered());
 		this.counter = 0;
+
+		if (process.env.SIMULATION_CUSTOM_AGENT_FILE) {
+			const agentFilePath = process.env.SIMULATION_CUSTOM_AGENT_FILE;
+			if (fs.existsSync(agentFilePath)) {
+				const agentFileContent = fs.readFileSync(agentFilePath, 'utf-8');
+				const agentFileUri = URI.file(agentFilePath);
+				const parser = new PromptFileParser();
+				const parsedFile = parser.parse(agentFileUri, agentFileContent);
+
+				parsedFile.header?.tools?.map(toolName => this._customAgentToolSet.add(toolName));
+			}
+		}
 	}
 
 	private ensureToolsRegistered() {
@@ -82,7 +95,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 	}
 
 	async invokeTool(name: string, options: LanguageModelToolInvocationOptions<unknown>, token: CancellationToken): Promise<LanguageModelToolResult> {
-		logger.debug('SimulationExtHostToolsService.invokeTool', name, JSON.stringify(options.input));
+		logger.debug('😈=== SimulationExtHostToolsService.invokeTool', name, JSON.stringify(options.input));
 		const start = Date.now();
 		let err: Error | undefined;
 		try {
@@ -118,7 +131,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			err = e;
 			throw e;
 		} finally {
-			logger.debug(`SimulationExtHostToolsService.invokeTool ${name} done in ${Date.now() - start}ms` + (err ? ` with error: ${err.message}` : ''));
+			logger.debug(`😈=== SimulationExtHostToolsService.invokeTool ${name} done in ${Date.now() - start}ms` + (err ? ` with error: ${err.message}` : ''));
 		}
 	}
 
@@ -153,9 +166,9 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 					.map(line => line.trim())
 					.filter(line => line && !line.startsWith('#')); // Filter out empty lines and comments
 				javaUpgradeToolsFromFile.forEach(tool => allowedToolsSet.add(tool));
-				logger.debug('Loaded Java upgrade tools from file:', javaUpgradeToolsFromFile);
+				logger.debug('😈=== Loaded Java upgrade tools from file:', javaUpgradeToolsFromFile);
 			} catch (error) {
-				logger.warn('Failed to read Java upgrade tools file:', error);
+				logger.warn('😈=== Failed to read Java upgrade tools file:', error);
 			}
 		}
 
@@ -216,7 +229,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		}
 
 		if (process.env.MCP_SERVERS_INITIALIZED !== 'true') {
-			console.log('SimulationExtHostToolsService: MCP servers initialization timed out');
+			logger.debug('😈=== SimulationExtHostToolsService: MCP servers initialization timed out');
 		}
 
 		const mcpTools = this._mcpToolService.getEnabledTools(request, filter);
@@ -229,30 +242,16 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		}
 		let allTools = Array.from(allToolsMap.values());
 
-		let isCustomAgent = false;
-		if (process.env.SIMULATION_CUSTOM_AGENT_FILE) {
-			const agentFilePath = process.env.SIMULATION_CUSTOM_AGENT_FILE;
-			if (fs.existsSync(agentFilePath)) {
-				const agentFileContent = fs.readFileSync(agentFilePath, 'utf-8');
-				const agentFileUri = URI.file(agentFilePath);
-				const parser = new PromptFileParser();
-				const parsedFile = parser.parse(agentFileUri, agentFileContent);
-
-				const customAgentTollSets = new Set<string>();
-				parsedFile.header?.tools?.map(toolName => customAgentTollSets.add(toolName));
-				let filteredTools = allTools.filter(tool => customAgentTollSets.has(tool.name));
-				allTools = filteredTools;
-				isCustomAgent = true;
-			}
-		}
-
+		allTools = allTools.filter(tool => this._customAgentToolSet.has(tool.name));
 		const toolNames = allTools.map(t => t.name).join(",");
+
 		if (process.env.MCP_SERVERS_INITIALIZED === 'true' && this.counter++ === 0) {
-			if (isCustomAgent) {
-				logger.debug(`Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}, to filter available tools`);
+			if (this._customAgentToolSet.size > 0) {
+				logger.debug(`😈=== Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}, to filter available tools`);
 			}
-			logger.debug('SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
-			logger.debug(`SimulationExtHostToolsService.invokeToolTimeout set to ${process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000}`);
+			logger.debug('😈=== SimulationExtHostToolsService.mcpTools', mcpTools.length, Array.from(mcpTools.values()).map(tool => tool.name).join(', '));
+			logger.debug('😈=== SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
+			logger.debug(`😈=== SimulationExtHostToolsService.invokeToolTimeout set to ${process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000}`);
 		}
 		return allTools;
 	}
