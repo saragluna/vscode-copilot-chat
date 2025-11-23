@@ -111,9 +111,6 @@ export class ChatParticipantRequestHandler {
 		normalizeSummariesOnRounds(turns);
 
 		const actualSessionId = sessionId ?? ((request.sessionId && request.sessionId !== '1') ? request.sessionId : generateUuid());
-		console.log(`😈=== Session Id from history is ${sessionId}`);
-		console.log(`😈=== Request session id is ${request.sessionId}`)
-		console.log(`😈=== Actual session id is ${actualSessionId}`)
 
 		this.documentContext = IDocumentContext.inferDocumentContext(request, tabsAndEditorsService.activeTextEditor, turns);
 

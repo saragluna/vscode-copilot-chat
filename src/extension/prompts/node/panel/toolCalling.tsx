@@ -195,11 +195,9 @@ function buildToolResultElement(accessor: ServicesAccessor, props: ToolResultOpt
 					toolResult = textToolResult(validationResult.error + toolErrorSuffix);
 				} else {
 					validation = ToolValidationOutcome.Valid;
-					console.log(`😈=== inputObj is from validationResult`)
 					inputObj = validationResult.inputObj;
 				}
 			} else {
-				console.log(`😈=== inputObj is from toolCall.arguments`)
 				inputObj = JSON.parse(props.toolCall.arguments);
 			}
 
@@ -212,10 +210,8 @@ function buildToolResultElement(accessor: ServicesAccessor, props: ToolResultOpt
 					}
 
 					if (copilotTool?.resolveInput) {
-						console.log(`😈=== inputObj is from copilotTool.resolveInput`)
 						inputObj = await copilotTool.resolveInput(inputObj, props.promptContext, props.toolCallMode);
 					}
-					console.log(`😈=== inputObj is ${JSON.stringify(inputObj, null, 2)}`);
 
 					const invocationOptions: LanguageModelToolInvocationOptions<unknown> = {
 						input: inputObj,
