@@ -215,7 +215,7 @@ export async function simulateEditingScenario(
 	 * A map from doc to relative path with initial contents which is populated right before modifying a document.
 	 */
 	const changedDocsInitialStates = new Map<vscode.TextDocument, Promise<IWorkspaceStateFile> | null>();
-	let continueTimes = 8;
+	let continueTimes = 10;
 
 	// run each query for the scenario
 	try {
