@@ -241,19 +241,22 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			allToolsMap.set(t.name, t);
 		}
 		let allTools = Array.from(allToolsMap.values());
+		let enabledTools = allTools;
 
-		allTools = allTools.filter(tool => this._customAgentToolSet.has(tool.name));
-		const toolNames = allTools.map(t => t.name).join(",");
+		if (this._customAgentToolSet.size > 0) {
+			enabledTools = allTools.filter(tool => this._customAgentToolSet.has(tool.name));
+		}
 
 		if (process.env.MCP_SERVERS_INITIALIZED === 'true' && this.counter++ === 0) {
 			if (this._customAgentToolSet.size > 0) {
 				logger.debug(`😈=== Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}, to filter available tools`);
 			}
+			logger.debug('😈=== SimulationExtHostToolsService.allToos', allTools.length, allTools.map(tool => tool.name).join(', '));
 			logger.debug('😈=== SimulationExtHostToolsService.mcpTools', mcpTools.length, Array.from(mcpTools.values()).map(tool => tool.name).join(', '));
-			logger.debug('😈=== SimulationExtHostToolsService.getEnabledTool', allTools.length, toolNames);
+			logger.debug('😈=== SimulationExtHostToolsService.getEnabledTool', enabledTools.length, enabledTools.map(t => t.name).join(","));
 			logger.debug(`😈=== SimulationExtHostToolsService.invokeToolTimeout set to ${process.env.SIMULATION_INVOKE_TOOL_TIMEOUT || 60_000}`);
 		}
-		return allTools;
+		return enabledTools;
 	}
 
 	addTestToolOverride(info: LanguageModelToolInformation, tool: LanguageModelTool<unknown>): void {
