@@ -158,15 +158,15 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		const packageJsonTools = getPackagejsonToolsForTest();
 
 		const allowedToolsSet = new Set<string>();
+		let javaUpgradeToolsFromFile: string[] = [];
 		if (process.env.JAVA_UPGRADE_TOOLS) {
 			try {
 				const config = fs.readFileSync(process.env.JAVA_UPGRADE_TOOLS, 'utf8');
-				const javaUpgradeToolsFromFile = config
+				javaUpgradeToolsFromFile = config
 					.split('\n')
 					.map(line => line.trim())
 					.filter(line => line && !line.startsWith('#')); // Filter out empty lines and comments
 				javaUpgradeToolsFromFile.forEach(tool => allowedToolsSet.add(tool));
-				logger.debug('😈=== Loaded Java upgrade tools from file:', javaUpgradeToolsFromFile);
 			} catch (error) {
 				logger.warn('😈=== Failed to read Java upgrade tools file:', error);
 			}
@@ -248,6 +248,9 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		}
 
 		if (process.env.MCP_SERVERS_INITIALIZED === 'true' && this.counter++ === 0) {
+			if (process.env.JAVA_UPGRADE_TOOLS) {
+				logger.debug('😈=== Loaded Java upgrade tools from file:', javaUpgradeToolsFromFile);
+			}
 			if (this._customAgentToolSet.size > 0) {
 				logger.debug(`😈=== Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}, to filter available tools`);
 			}
