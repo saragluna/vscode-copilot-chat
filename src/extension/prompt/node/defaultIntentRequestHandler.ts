@@ -83,7 +83,7 @@ export class DefaultIntentRequestHandler {
 		protected readonly documentContext: IDocumentContext | undefined,
 		private readonly location: ChatLocation,
 		private readonly chatTelemetryBuilder: ChatTelemetryBuilder,
-		private readonly handlerOptions: IDefaultIntentRequestHandlerOptions = { maxToolCallIterations: 15 },
+		private readonly handlerOptions: IDefaultIntentRequestHandlerOptions = { maxToolCallIterations: 150 },
 		private readonly onPaused: Event<boolean>, // todo: use a PauseController instead
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IConversationOptions private readonly options: IConversationOptions,
@@ -333,6 +333,8 @@ export class DefaultIntentRequestHandler {
 				loop.telemetry.sendToolCallingTelemetry(result.toolCallRounds, result.availableTools, this.token.isCancellationRequested ? 'cancelled' : result.response.type);
 			}
 			result.chatResult ??= {};
+			this.conversation.response = result.response;
+
 			if ((result.chatResult.metadata as IResultMetadata)?.maxToolCallsExceeded) {
 				loop.telemetry.sendToolCallingTelemetry(result.toolCallRounds, result.availableTools, 'maxToolCalls');
 			}

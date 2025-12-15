@@ -29,7 +29,6 @@ import { EditCodePrompt2 } from '../../prompts/node/panel/editCodePrompt2';
 import { NotebookInlinePrompt } from '../../prompts/node/panel/notebookInlinePrompt';
 import { ToolName } from '../../tools/common/toolNames';
 import { IToolsService } from '../../tools/common/toolsService';
-import { getAgentMaxRequests } from '../common/agentConfig';
 import { AgentIntentInvocation } from './agentIntent';
 import { EditCodeIntent, EditCodeIntentOptions } from './editCodeIntent';
 
@@ -81,7 +80,7 @@ export class EditCode2Intent extends EditCodeIntent {
 
 	protected override getIntentHandlerOptions(request: vscode.ChatRequest): IDefaultIntentRequestHandlerOptions | undefined {
 		return {
-			maxToolCallIterations: getRequestedToolCallIterationLimit(request) ?? this.instantiationService.invokeFunction(getAgentMaxRequests),
+			maxToolCallIterations: getRequestedToolCallIterationLimit(request) ?? this.configurationService.getNonExtensionConfig('chat.agent.maxRequests') ?? 150,
 			temperature: this.configurationService.getConfig(ConfigKey.Advanced.AgentTemperature) ?? 0,
 			overrideRequestLocation: ChatLocation.EditingSession,
 		};
