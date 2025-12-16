@@ -5,7 +5,9 @@
 // Allow importing vscode here. eslint does not let us exclude this path: https://github.com/import-js/eslint-plugin-import/issues/2800
 /* eslint-disable import/no-restricted-paths */
 
+import * as cp from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 import type { CancellationToken, ChatRequest, LanguageModelTool, LanguageModelToolInformation, LanguageModelToolInvocationOptions, LanguageModelToolResult } from 'vscode';
 import { getToolName, ToolName } from '../../../src/extension/tools/common/toolNames';
 import { ICopilotTool } from '../../../src/extension/tools/common/toolsRegistry';
@@ -44,7 +46,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		this.ensureToolsRegistered();
 		return [
 			...this._inner.tools.filter(t => !this._disabledTools.has(t.name) && !this._overrides.has(t.name)),
-			...Iterable.map(this._overrides.values(), i => i.info),
+			...Iterable.filter(Iterable.map(this._overrides.values(), i => i.info), t => !this._disabledTools.has(t.name)),
 			...this._mcpToolService.tools.filter(t => !this._disabledTools.has(t.name) && !this._overrides.has(t.name)),
 		];
 	}
@@ -67,11 +69,13 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 	) {
 		super(logService);
 		this._inner = instantiationService.createInstance(ToolsService);
-		this._mcpToolService = instantiationService.createInstance(McpToolsService);
+		this._mcpToolService = instantiationService.createInstance(McpToolsService) as unknown as IToolsService;
 
 		// register the contribution so that our tools are on vscode.lm.tools
 		setImmediate(() => this.ensureToolsRegistered());
 		this.counter = 0;
+
+		this._registerDefaultOverrides();
 
 		if (process.env.SIMULATION_CUSTOM_AGENT_FILE) {
 			const agentFilePath = process.env.SIMULATION_CUSTOM_AGENT_FILE;
@@ -199,7 +203,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			))
 			;
 
-		this._mcpToolService.getEnabledTools(request, filter);
+		this._mcpToolService.getEnabledTools(request, endpoint, filter);
 
 		// Wait for MCP servers to be initialized
 		const maxWaitTime = 60000; // 60 seconds maximum wait time
@@ -237,7 +241,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 			logger.debug('😈=== SimulationExtHostToolsService: MCP servers initialization timed out');
 		}
 
-		const mcpTools = this._mcpToolService.getEnabledTools(request, filter);
+		const mcpTools = this._mcpToolService.getEnabledTools(request, endpoint, filter);
 		const allToolsMap = new Map<string, LanguageModelToolInformation>();
 		for (const t of tools) {
 			allToolsMap.set(t.name, t);
@@ -271,5 +275,180 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 		if (!this._disabledTools.has(info.name)) {
 			this._overrides.set(info.name as ToolName, { tool, info });
 		}
+	}
+
+	private _registerDefaultOverrides() {
+		// Real runSubagent implementation
+		const runSubagentTool = {
+			async invoke(
+				options: LanguageModelToolInvocationOptions<any>,
+				_token: CancellationToken
+			): Promise<LanguageModelToolResult> {
+				var { prompt, agentName, model } = options.input;
+				agentName = 'default';
+				console.log(`[Subagent] Invoking with prompt: ${prompt}, agent: ${agentName}, model: ${model}`);
+				const vscode = await import('vscode');
+
+				// 1. Prepare temp directory
+				const workspacePath = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+				if (!workspacePath) {
+					throw new Error('No workspace folder found');
+				}
+				console.log(`[Subagent] Workspace path: ${workspacePath}`);
+
+				const simulationTempDir = path.join(workspacePath, '.simulation', 'temp');
+				if (!fs.existsSync(simulationTempDir)) {
+					fs.mkdirSync(simulationTempDir, { recursive: true });
+				}
+				const tempDir = fs.mkdtempSync(path.join(simulationTempDir, 'copilot-subagent-'));
+				console.log(`[Subagent] Using temp dir: ${tempDir}`);
+
+				// Create separate directories for scenarios (input) and output
+				// This is needed because simulationMain.ts clears the output directory
+				const scenariosDir = path.join(tempDir, 'scenarios');
+				const outputDir = path.join(tempDir, 'output');
+				fs.mkdirSync(scenariosDir, { recursive: true });
+				fs.mkdirSync(outputDir, { recursive: true });
+
+				try {
+					// 2. Create state file
+					// Note: workspaceFoldersFilePaths must be relative to the scenario folder (scenariosDir)
+					// Use a relative path from scenariosDir to workspacePath
+					const stateFile = 'chatSetup.state.json';
+					const relativeWorkspacePath = path.relative(scenariosDir, workspacePath);
+					const stateContent = {
+						workspaceFoldersFilePaths: [relativeWorkspacePath]
+					};
+					fs.writeFileSync(path.join(scenariosDir, stateFile), JSON.stringify(stateContent));
+
+					// 3. Create conversation file
+					const conversationFile = 'subagent.conversation.json';
+					const fullPrompt = agentName ? `@${agentName} ${prompt}` : prompt;
+					const conversationContent = [
+						{
+							question: fullPrompt,
+							stateFile: stateFile
+						}
+					];
+					fs.writeFileSync(path.join(scenariosDir, conversationFile), JSON.stringify(conversationContent));
+					console.log(`[Subagent] Created configuration files in ${scenariosDir}`);
+
+					// 5. Spawn simulation process
+					let simulationMainPath = path.join(__dirname, '../../../../simulationMain.js');
+					if (!fs.existsSync(simulationMainPath)) {
+						// Fallback: try to find it from process.cwd()
+						simulationMainPath = path.join(process.cwd(), 'dist', 'simulationMain.js');
+					}
+
+					if (!fs.existsSync(simulationMainPath)) {
+						throw new Error(`Could not find simulationMain.js at ${simulationMainPath}`);
+					}
+
+					const args = [
+						simulationMainPath,
+						`--external-scenarios=${scenariosDir}`,
+						`--output=${outputDir}`,
+						'--json',
+						'--disable-tools=runSubagent', // Prevent recursion
+						'--sidebar',
+						'--headless',
+						'--in-extension-host',
+						'--n=1',
+						'--scenario-workspace-folder',
+						'--verbose',
+						'--parallelism=1',
+						'--skip-cache'
+					];
+
+					const env: any = { ...process.env, SIMULATION_SUBAGENT: '1' };
+					delete env.VSCODE_SIMULATION_EXTENSION_ENTRY;
+
+					console.log(`[Subagent] Spawning process: node ${args.join(' ')}`);
+
+					return await new Promise<LanguageModelToolResult>((resolve, reject) => {
+						const child = cp.spawn('node', args, {
+							env
+						});
+
+						let stdout = '';
+						let stderr = '';
+
+						child.stdout.on('data', (data) => stdout += data.toString());
+						child.stderr.on('data', (data) => stderr += data.toString());
+
+						child.on('close', (code) => {
+							console.log(`[Subagent] Process exited with code ${code}`);
+							if (code !== 0) {
+								console.error(`[Subagent] Stderr: ${stderr}`);
+								console.log(`[Subagent] Stdout: ${stdout}`);
+								reject(new Error(`Subagent process exited with code ${code}\nStderr: ${stderr}\nStdout: ${stdout}`));
+								return;
+							}
+
+							// 6. Parse report
+							try {
+								const reportPath = path.join(outputDir, 'report.json');
+								if (!fs.existsSync(reportPath)) {
+									reject(new Error(`Subagent did not produce report.json\nStdout: ${stdout}\nStderr: ${stderr}`));
+									return;
+								}
+
+								const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+								if (!report || report.length === 0) {
+									reject(new Error('Subagent report is empty'));
+									return;
+								}
+
+								const result = report[0];
+								const outcome = result.outcomes?.[0];
+								if (!outcome) {
+									reject(new Error('Subagent produced no outcome'));
+									return;
+								}
+
+								const responseText = outcome.content || 'No response text';
+								console.log(`[Subagent] Success. Response length: ${responseText}`);
+
+								resolve(new vscode.LanguageModelToolResult([
+									new vscode.LanguageModelTextPart(responseText)
+								]));
+
+							} catch (e) {
+								console.error(`[Subagent] Error parsing output: ${e}`);
+								reject(new Error(`Failed to parse subagent output: ${e.message}`));
+							}
+						});
+					});
+				} finally {
+					// Cleanup temp dir
+					try {
+						console.log(`[Subagent] Cleaning up ${tempDir}`);
+						fs.rmSync(tempDir, { recursive: true, force: true });
+					} catch (e) {
+						// Ignore cleanup errors
+						console.error(`[Subagent] Error cleaning up: ${e}`);
+					}
+				}
+			}
+		};
+
+		this.addTestToolOverride(
+			{
+				name: ToolName.CoreRunSubagent,
+				description: 'Launch a new agent to handle complex, multi-step tasks autonomously',
+				inputSchema: {
+					type: 'object',
+					properties: {
+						prompt: { type: 'string' },
+						description: { type: 'string' },
+						agentName: { type: 'string' }
+					},
+					required: ['prompt', 'description']
+				},
+				tags: [],
+				source: undefined
+			},
+			runSubagentTool
+		);
 	}
 }

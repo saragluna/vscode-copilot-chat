@@ -87,6 +87,7 @@ export const getAgentTools = async (accessor: ServicesAccessor, request: vscode.
 
 	allowTools[ToolName.CoreRunTest] = await testService.hasAnyTests();
 	allowTools[ToolName.CoreRunTask] = tasksService.getTasks().length > 0;
+	allowTools[ToolName.CoreRunSubagent] = true;
 
 	if (model.family.includes('grok-code')) {
 		allowTools[ToolName.CoreManageTodoList] = false;
