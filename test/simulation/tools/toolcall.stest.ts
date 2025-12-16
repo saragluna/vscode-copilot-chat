@@ -5,6 +5,7 @@
 import { assert } from 'console';
 import * as fs from 'fs';
 import * as path from 'path';
+import type { LanguageModelToolResult } from 'vscode';
 import { CopilotToolMode } from '../../../src/extension/tools/common/toolsRegistry';
 import { IToolsService } from '../../../src/extension/tools/common/toolsService';
 import { IConversationOptions } from '../../../src/platform/chat/common/conversationOptions';
@@ -16,7 +17,6 @@ import { SimulationWorkspaceExtHost } from '../../base/extHostContext/simulation
 import { ssuite, stest } from '../../base/stest';
 import { discoverToolsCalls } from '../../e2e/scenarioLoader';
 import { fetchConversationOptions } from '../../e2e/scenarioTest';
-
 
 type ArgsPreprocessor = (accessor: ITestingServicesAccessor, args: any, workspaceFoldersFilePaths?: string[]) => Promise<any> | any;
 
@@ -147,9 +147,8 @@ ssuite({ title: 'tooltest', subtitle: 'toolcall', location: 'panel' }, (inputPat
 			onCancellationRequested: () => ({ dispose: () => { } })
 		};
 
-
-
 		const toolsService = accessor.get(IToolsService);
+
 		const tool = toolsService.getCopilotTool(toolName);
 
 		if (!tool) {
@@ -173,6 +172,6 @@ ssuite({ title: 'tooltest', subtitle: 'toolcall', location: 'panel' }, (inputPat
 				toolInvocationToken: undefined
 			},
 			token
-		);
+		) as LanguageModelToolResult;
 	}
 });

@@ -533,9 +533,12 @@ export async function simulateEditingScenario(
 			${lastResponseMessage}`);
 
 			let nextStep;
-			if (conversation.response?.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
+			// Skip decideNextStep logic in subagent processes
+			if (!process.env.SIMULATION_SUBAGENT && conversation.response?.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
 				nextStep = await decideNextStep(lastResponseMessage);
 				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
+			} else if (process.env.SIMULATION_SUBAGENT) {
+				console.log(`😈=== Running in subagent mode, skipping decideNextStep logic`);
 			}
 
 			if ("Continue" === nextStep) {
