@@ -66,7 +66,7 @@ export namespace Completions {
 	}
 }
 
-export type CompletionsFetchErrorType = 'stop_content_filter' | 'stop_length' | 'unknown';
+export type CompletionsFetchErrorType = 'stop_content_filter' | 'stop_length' | 'unknown' | 'stop';
 
 export class CompletionsFetchError extends Error {
 	constructor(

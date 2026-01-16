@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
+import * as fs from 'fs';
 import * as path from 'path';
 import type * as vscode from 'vscode';
 import { Intent } from '../../src/extension/common/constants';
@@ -20,6 +21,7 @@ import { editorAgentName, getChatParticipantIdFromName } from '../../src/platfor
 import { IChatMLFetcher } from '../../src/platform/chat/common/chatMLFetcher';
 import { ILanguageDiagnosticsService } from '../../src/platform/languages/common/languageDiagnosticsService';
 import { ILanguageFeaturesService } from '../../src/platform/languages/common/languageFeaturesService';
+import { FinishedCompletionReason } from '../../src/platform/networking/common/openai';
 import { ITabsAndEditorsService } from '../../src/platform/tabs/common/tabsAndEditorsService';
 import { isInExtensionHost } from '../../src/platform/test/node/isInExtensionHost';
 import { IDeserializedWorkspaceState } from '../../src/platform/test/node/promptContextModel';
@@ -38,6 +40,7 @@ import { commonPrefixLength, commonSuffixLength } from '../../src/util/vs/base/c
 import { URI } from '../../src/util/vs/base/common/uri';
 import { SyncDescriptor } from '../../src/util/vs/platform/instantiation/common/descriptors';
 import { IInstantiationService } from '../../src/util/vs/platform/instantiation/common/instantiation';
+import { PromptFileParser } from '../../src/util/vs/workbench/contrib/chat/common/promptSyntax/promptFileParser';
 import { ChatLocation, ChatReferenceDiagnostic, ChatRequest, ChatRequestEditorData, ChatResponseMarkdownPart, ChatResponseNotebookEditPart, ChatResponseTextEditPart, Diagnostic, DiagnosticRelatedInformation, LanguageModelToolResult, Location, NotebookRange, Range, Selection, TextEdit, Uri, WorkspaceEdit } from '../../src/vscodeTypes';
 import { SimulationExtHostToolsService } from '../base/extHostContext/simulationExtHostToolsService';
 import { SimulationWorkspaceExtHost } from '../base/extHostContext/simulationWorkspaceExtHost';
@@ -45,6 +48,7 @@ import { SpyingChatMLFetcher } from '../base/spyingChatMLFetcher';
 import { ISimulationTestRuntime, NonExtensionConfiguration } from '../base/stest';
 import { createWorkingSetFileVariable, parseQueryForTest } from '../e2e/testHelper';
 import { readBuiltinIntents } from '../intent/intentTest';
+import { decideNextStep } from './appmodAiHelper';
 import { getDiagnostics } from './diagnosticProviders';
 import { convertTestToVSCodeDiagnostics } from './diagnosticProviders/utils';
 import { SimulationLanguageFeaturesService } from './language/simulationLanguageFeatureService';
@@ -211,13 +215,16 @@ export async function simulateEditingScenario(
 	 * A map from doc to relative path with initial contents which is populated right before modifying a document.
 	 */
 	const changedDocsInitialStates = new Map<vscode.TextDocument, Promise<IWorkspaceStateFile> | null>();
+	let continueTimes = 10;
 
 	// run each query for the scenario
 	try {
 		const seenFiles: vscode.ChatPromptReference[] = [];
 
-		for (const query of scenario.queries) {
+		for (let queryIndex = 0; queryIndex < scenario.queries.length; queryIndex++) {
+			const query = scenario.queries[queryIndex];
 
+			console.log(`😈=== ${query.query}`);
 			if (query.file) {
 				if (isNotebook(query.file)) {
 					const notebook = workspace.getNotebook(query.file);
@@ -367,6 +374,31 @@ export async function simulateEditingScenario(
 			references.push(...(host.contributeAdditionalReferences?.(accessor, references) ?? []));
 
 			const { location, location2 } = host.prepareChatRequestLocation(accessor, range);
+
+			let modeInstructions2: vscode.ChatRequestModeInstructions | undefined = undefined;
+			if (process.env.SIMULATION_CUSTOM_AGENT_FILE) {
+				console.log(`Load custom agent from ${process.env.SIMULATION_CUSTOM_AGENT_FILE}`);
+				const agentFilePath = process.env.SIMULATION_CUSTOM_AGENT_FILE;
+				if (fs.existsSync(agentFilePath)) {
+					const agentFileContent = fs.readFileSync(agentFilePath, 'utf-8');
+					const agentFileUri = URI.file(agentFilePath);
+					const parser = new PromptFileParser();
+					const parsedFile = parser.parse(agentFileUri, agentFileContent);
+
+					if (parsedFile.header && parsedFile.body) {
+						modeInstructions2 = {
+							name: parsedFile.header.name ?? "CustomAgentFromFile",
+							content: parsedFile.body.getContent(),
+							toolReferences: parsedFile.header.tools?.map(toolName => ({
+								name: toolName
+							})) as readonly vscode.ChatLanguageModelToolReference[] | undefined,
+							metadata: {}
+						};
+						console.log(`😈=== Initialized modeInstructions2 as ${JSON.stringify(modeInstructions2)}`);
+					}
+				}
+			}
+
 			let request: vscode.ChatRequest = {
 				location,
 				location2,
@@ -381,7 +413,8 @@ export async function simulateEditingScenario(
 				model: null!, // https://github.com/microsoft/vscode-copilot/issues/9475
 				tools: new Map(),
 				id: '1',
-				sessionId: '1'
+				sessionId: query.sessionId ?? '1',
+				modeInstructions2: modeInstructions2,
 			};
 
 			// Run intent detection
@@ -493,6 +526,37 @@ export async function simulateEditingScenario(
 			const result = await requestHandler.getResult();
 			history.push(new ChatRequestTurn(request.prompt, request.command, [...request.references], '', []));
 			history.push(new ChatResponseTurn([new ChatResponseMarkdownPart(markdownChunks.join(''))], result, ''));
+
+			const conversation = requestHandler.conversation;
+			const lastResponseMessage = conversation.getLatestTurn().rounds.at(-1)?.response;
+			console.log(`😈=== query response reason ${conversation.response?.reason}, query last response message:
+			${lastResponseMessage}`);
+
+			let nextStep;
+			// Skip decideNextStep logic in subagent processes
+			if (!process.env.SIMULATION_SUBAGENT && conversation.response?.reason === FinishedCompletionReason.Stop && lastResponseMessage) {
+				nextStep = await decideNextStep(lastResponseMessage);
+				console.log(`😈=== LLM decides the next step should be ${nextStep}`);
+			} else if (process.env.SIMULATION_SUBAGENT) {
+				console.log(`😈=== Running in subagent mode, skipping decideNextStep logic`);
+			}
+
+			if ("Continue" === nextStep) {
+				if (continueTimes-- > 0) {
+					// Insert a new "Continue" query after the current index
+					const nextQuery = process.env.NEXT_STEP_QUERY || "proceed with the migration";
+					const continueQuery: IScenarioQuery = {
+						query: `/editAgent ${nextQuery}`,
+						expectedIntent: undefined,
+						validate: async (outcome, workspace, accessor) => assert.ok(true),
+						// sessionId: conversation.sessionId
+					};
+					scenario.queries.splice(queryIndex + 1, 0, continueQuery);
+					console.log(`😈=== Added one more query to the list`);
+				} else {
+					console.log(`😈=== Reached continue upper limits, will skip`);
+				}
+			}
 
 			let annotations = await responseProcessor?.postProcess(accessor, workspace, stream, result) ?? [];
 

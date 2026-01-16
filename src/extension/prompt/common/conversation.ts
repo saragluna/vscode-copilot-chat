@@ -5,6 +5,7 @@
 
 import { PromptReference, Raw } from '@vscode/prompt-tsx';
 import type { ChatRequest, ChatRequestEditedFileEvent, ChatResponseStream, ChatResult, LanguageModelToolResult } from 'vscode';
+import { ChatResponse } from '../../../platform/chat/common/commonTypes';
 import { FilterReason } from '../../../platform/networking/common/openai';
 import { IWorkspaceService } from '../../../platform/workspace/common/workspaceService';
 import { isLocation, toLocation } from '../../../util/common/types';
@@ -224,7 +225,7 @@ export interface IConversationState {
 export class Conversation {
 
 	private readonly _turns: Turn[] = [];
-
+	private _response: ChatResponse | undefined;
 	constructor(
 		readonly sessionId: string,
 		turns: Turn[]
@@ -239,6 +240,14 @@ export class Conversation {
 
 	getLatestTurn(): Turn {
 		return this._turns.at(-1)!; // safe, we checked for length in the ctor
+	}
+
+	get response(): ChatResponse | undefined {
+		return this._response;
+	}
+
+	set response(value: ChatResponse) {
+		this._response = value;
 	}
 }
 
