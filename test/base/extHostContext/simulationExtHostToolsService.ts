@@ -285,7 +285,6 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 				_token: CancellationToken
 			): Promise<LanguageModelToolResult> {
 				var { prompt, agentName } = options.input;
-				agentName = 'default';
 				const model = process.env.MODEL_NAME || 'gpt-5';
 				console.log(`[Subagent] Invoking with prompt: ${prompt}, agent: ${agentName}, model: ${model}`);
 				const vscode = await import('vscode');
@@ -365,7 +364,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 						'--install-extension /agent/java-migration/migrate-java-to-azure.vsix'
 					];
 
-					const env: any = { ...process.env, SIMULATION_SUBAGENT: '1', MODEL_NAME: model };
+					const env: any = { ...process.env, SIMULATION_SUBAGENT: '1', MODEL_NAME: model, SIMULATION_DISABLE_THINKING: '1' };
 					delete env.VSCODE_SIMULATION_EXTENSION_ENTRY;
 
 					console.log(`[Subagent] Spawning process: node ${args.join(' ')}`);

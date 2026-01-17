@@ -544,6 +544,13 @@ function createSimulationTestContext(
 ) {
 	const simulationEndpointHealth = rpcInExtensionHost ? new ProxiedSimulationEndpointHealth(rpcInExtensionHost) : new SimulationEndpointHealthImpl();
 
+	// When running a subagent, we need to disable extended thinking to avoid
+	// Claude API errors (thinking blocks not preserved in conversation history)
+	if (process.env.SIMULATION_DISABLE_THINKING === '1') {
+		console.log('Disabling extended thinking for simulation subagent');
+		configs = { ...configs, 'github.copilot.chat.anthropic.thinking.budgetTokens': 0 };
+	}
+
 	let createChatMLCache: ((info: CurrentTestRunInfo) => IChatMLCache) | undefined;
 	let createNesFetchCache: ((info: CurrentTestRunInfo) => ICompletionsCache) | undefined;
 
