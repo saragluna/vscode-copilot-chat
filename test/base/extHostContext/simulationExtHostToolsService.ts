@@ -360,6 +360,7 @@ export class SimulationExtHostToolsService extends BaseToolsService implements I
 						'--verbose',
 						'--parallelism=1',
 						'--skip-cache',
+						'--skip-model-cache',
 						'--model=' + model,
 						'--install-extension /agent/java-migration/migrate-java-to-azure.vsix'
 					];
